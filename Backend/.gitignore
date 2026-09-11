@@ -1,0 +1,6 @@
+.venv
+.env
+run.py
+uv.lock
+__pycache__/
+*.pyc

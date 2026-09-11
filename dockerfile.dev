@@ -1,0 +1,13 @@
+# We can use a single base image for convenience, 
+# or split them if your team prefers.
+FROM python:3.11-slim
+
+# Install Node.js into the image so it can do both
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://nodesource.com | bash - && \
+    apt-get install -y nodejs
+
+# Install uv for fast backend installs
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app

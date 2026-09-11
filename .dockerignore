@@ -1,0 +1,4 @@
+node_module/
+.venv/
+__pycahe__/
+Document/

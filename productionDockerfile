@@ -1,0 +1,27 @@
+FROM node:24.20.0-slim
+WORKDIR /Traffic_Analysis_System/Frontend
+COPY Frontend/package*.json ./
+RUN ci
+COPY Frontned ./Frontend
+RUN cd Frontned && npm run build
+
+
+FROM  python:3.14-slim
+WORKDIR /Traffic_Analysis_System/Backend
+# installing uv package manager
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY Backend/pyproject.toml Backend/uv.lock* Backend/requirements*.txt ./Backend
+
+RUN cd backend && \
+    if [ -f uv.lock ]; then \
+        uv sync --system --no-dev; \
+    else \
+        uv pip install --system --no-cache -r requirements.txt; \
+    fi
+COPY Backend ./
+# 5. Copy the compiled static frontend files from Stage 1
+COPY --from=frontend-builder /app/frontend/dist ./backend/dist
+
+EXPOSE 8000
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

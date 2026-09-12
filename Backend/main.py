@@ -1,11 +1,10 @@
 # backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+
 import uvicorn
 import logging
 from contextlib import asynccontextmanager
-import os
 
 # Routes
 from app.api.routes import route_agents, route_auth, route_camera, route_stream, route_websocket, route_process
@@ -29,6 +28,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+# TODO : removing the logs of aiortc for better debuging
+logging.getLogger("aioice").setLevel(logging.WARNING)
+logging.getLogger("aiortc").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 # Initialize global services
 camera_manager = CameraManager()

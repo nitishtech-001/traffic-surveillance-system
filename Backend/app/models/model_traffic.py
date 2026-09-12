@@ -1,7 +1,10 @@
 # app/services/model.py
 import numpy as np
 from ultralytics import YOLO
+import logging
+import os
 
+logger = logging.getLogger(__name__)
 
 class TrafficModel:
     """
@@ -9,17 +12,23 @@ class TrafficModel:
     Returns an annotated BGR frame of the same shape.
     """
 
-    def __init__(self, model_path: str, conf: float = 0.35,
+    def __init__(self, model_name: str, conf: float = 0.35,
                  device: str = "cuda"):
-        print(model_path)
-        try:
-            self.model = YOLO(model_path)
-        except Exception as e:
-            print("Model path is wrong ... ", model_path)
+
+        model_path = os.getcwd()+f"/ai_models/{model_name}"
+        if os.path.exists(model_path):
+            logger.info(f"Model path is valid {model_path}")
+            try:
+                self.model = YOLO(model_path)
+                self.model.to(device)
+                self.conf = conf        
+                self.device = device
+                logger.info(f"Model initalized... {model_path}")
+            except Exception as e:
+                print("Model Initalization Error ", e)
+        else:
+            logger.info(f"Model path is invalid {model_path}")
         
-        self.model.to(device)
-        self.conf = conf        
-        self.device = device
 
     def infer(self, bgr_frame: np.ndarray) -> np.ndarray:
         """

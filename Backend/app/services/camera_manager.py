@@ -35,7 +35,7 @@ class CameraManager:
             
             # Create RTSP URL
             camera_url = cls._build_camera_url(camera)
-            logging.info(f"APP MANAGER (line 38) : rtsp url :: {camera_url} ")
+            logger.info(f"APP MANAGER (line 38) : rtsp url :: {camera_url} ")
             # Create frame buffer
             # cls.frame_buffers[camera_id] = queue.Queue(maxsize=10)
             
@@ -53,12 +53,14 @@ class CameraManager:
                 "connected": False,
                 "retry_count": 0
             }
-
-            model_path = "../ai_models/nightvision.pt"
+            # TODO : ADD different model path as per name provided
+            model_name = "nightvision.pt"
+            save_dir = os.getcwd()+"/uploads"
+            conf = 0.5
             # Start camera thread
             cls.camera_threads[camera_id] = Thread(
                 target=cls._camera_worker,
-                args=(camera_id, camera_url,model_path),
+                args=(camera_id, camera_url,save_dir, model_name,conf),
                 daemon=True
             )
             cls.camera_threads[camera_id].start()
@@ -121,7 +123,7 @@ class CameraManager:
 
     ## deamon service of camera handling the straming
     @classmethod
-    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",model_path: str=None,conf:float=0.4):
+    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",model_name: str=None,conf:float=0.4):
         """
         Worker thread for continuous camera frame capture
         """
@@ -130,14 +132,17 @@ class CameraManager:
         retry_attempts = 0
         max_retries = settings.MAX_RETRIES
         save_dir += f"/{camera_id}"
+        try:
+            os.makedirs(save_dir,exist_ok=True)
+        except Exception as e:
+            logger.error(e)
 
         fps_start_time = datetime.now()
         fps_frame_counter = 0
-        anotated_frame_counter = 0
-        if model_path:
-            model = TrafficModel(model_path=model_path,conf=conf )
-        
-       
+        annotated_frame_counter = 0
+        model = None
+        if model_name:
+            model = TrafficModel(model_name=model_name,conf=conf)
        
         while not cls.stop_events[camera_id].is_set():
             try:
@@ -151,10 +156,7 @@ class CameraManager:
 
                     cap = cv2.VideoCapture(camera_url)
                     cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-                    # cap.set(cv2.CAP_PROP_FPS, 30)
                     
-                    # Set timeout
-                    # cap.set(cv2.CAP_PROP_POS_MSEC, 0)
                     
                     if not cap.isOpened():
                         retry_attempts += 1
@@ -173,16 +175,16 @@ class CameraManager:
                     cls.camera_status[camera_id] = CameraStatusSchema.ONLINE
                     logger.info(f"Camera {camera_id} connected successfully")
 
-                    # Initialize VideoWriter properties for file saving
+                    # TODO : use when you need to store the video file
                     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
                     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
                     fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
                     if fps <= 0 or fps > 60: fps = 30
                     
-                    # Create unique file path for this reference video recording
+                    # TODO : add the video storing later
                     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_path = os.path.join(save_dir, f"_{timestamp_str}.mp4")
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
                     video_writer = cv2.VideoWriter(save_path, fourcc, fps, (frame_width, frame_height))
                     logger.info(f"Recording initialized for {camera_id} at path: {save_path}")
                 
@@ -194,6 +196,8 @@ class CameraManager:
                     logger.warning(f"Failed to read frame from camera {camera_id}")
                     cap.release()
                     cap = None
+                    if video_writer:
+                        video_writer.release()
                     cls.camera_status[camera_id] = CameraStatusSchema.OFFLINE
                     time.sleep(0.5)
                     continue
@@ -203,19 +207,19 @@ class CameraManager:
                 # cv2.imshow("cemera feed", display_frame)
                 # cv2.waitKey(1)
                 # TODO: later store the video to local for future reference
-                # if video_writer is not None:
-                #     video_writer.write(frame)
+                if video_writer is not None:
+                    video_writer.write(frame)
 
                 camera_info = cls.active_cameras[camera_id]
 
-                if model_path:
+                if model_name:
                     try:
-                        anotated = model.infer(frame)
-                        anotated_frame_counter += 1
-                        camera_info["anotated_frame_count"] = anotated_frame_counter
-                        camera_info["last_anotated_frame"] = anotated
+                        annotated = model.infer(frame)
+                        annotated_frame_counter += 1
+                        camera_info["annotated_frame_count"] = annotated_frame_counter
+                        camera_info["last_annotated_frame"] = annotated
                     except Exception as e:
-                        camera_info["last_anotated_frame"] = frame
+                        camera_info["last_annotated_frame"] = frame
                         logger.error(f"{camera_id} YOLO model failed")
 
                 # Update camera info
@@ -243,6 +247,8 @@ class CameraManager:
                 if cap:
                     cap.release()
                     cap = None
+                if video_writer:
+                    video_writer.release()
                 
                 time.sleep(1)
        
@@ -250,7 +256,6 @@ class CameraManager:
             cap.release()
         if video_writer:
             video_writer.release()
-        logger.info(f"Camera worker stopped for {camera_id}")
 
     """
     @classmethod
@@ -321,7 +326,7 @@ class CameraManager:
             if camera_id in cls.camera_threads:
                 cls.camera_threads[camera_id].join(timeout=5)
                 if cls.camera_threads[camera_id].is_alive():
-                    logging.info(f"camera {camera_id} is still running think another way")
+                    logger.info(f"camera {camera_id} is still running think another way")
             
             # Clean up
             if camera_id in cls.frame_buffers:

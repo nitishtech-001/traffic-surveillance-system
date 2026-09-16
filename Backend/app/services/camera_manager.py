@@ -33,12 +33,9 @@ class CameraManager:
         try:
             camera_id = camera.id
             
-            # Create RTSP URL
+            # Create Camera URL
             camera_url = cls._build_camera_url(camera)
-            logger.info(f"APP MANAGER (line 38) : rtsp url :: {camera_url} ")
-            # Create frame buffer
-            # cls.frame_buffers[camera_id] = queue.Queue(maxsize=10)
-            
+            logger.info(f"Camera URL :: {camera_url}")
             # Create stop event
             cls.stop_events[camera_id] = Event()
             
@@ -53,14 +50,33 @@ class CameraManager:
                 "connected": False,
                 "retry_count": 0
             }
-            # TODO : ADD different model path as per name provided
-            model_name = "nightvision.pt"
+            agent_file_name = ""
+            agent_name = ""
             save_dir = os.getcwd()+"/uploads"
             conf = 0.5
+            if camera.agent:
+                ## TODO : UPDATE this for new model you use
+                user_agent_name = camera.agent.lower()
+                if "object-detection" in user_agent_name:
+                    agent_file_name = "nightvision.pt"
+                    agent_name = "object-detection"
+                elif "face-detection" in user_agent_name:
+                    agent_file_name = "facedetection.pt"
+                    agent_name = "face-detection"
+                elif "licenseplate-detection" in user_agent_name:
+                    agent_file_name = "licenseplate.pt"
+                    agent_name = "licenseplate-detection"
+                elif "motion-detection" in user_agent_name:
+                    agent_file_name = "motiondetection.pt"
+                    agent_name = "motion-detection"
+                elif "text-detection" in user_agent_name:
+                    agent_file_name = "textdetection.pt"
+                    agent_name = "text-detection"
+
             # Start camera thread
             cls.camera_threads[camera_id] = Thread(
                 target=cls._camera_worker,
-                args=(camera_id, camera_url,save_dir, model_name,conf),
+                args=(camera_id, camera_url,save_dir, agent_file_name,agent_name,conf),
                 daemon=True
             )
             cls.camera_threads[camera_id].start()
@@ -79,51 +95,59 @@ class CameraManager:
     @classmethod
     def _build_camera_url(cls, camera: CameraSchema) -> str:
         """
-        Build RTSP URL from camera configuration
+        Get camera information and generate Camera url so backend and listen the camera feed
         """
         # Different camera brands have different RTSP URL formats
         # Hikvision: rtsp://username:password@ip:554/Streaming/Channels/101
         # Dahua: rtsp://username:password@ip:554/cam/realmonitor?channel=1&subtype=0
-        # Generic: rtsp://username:password@ip:554/stream
+        # Generic: rtsp://username:password@ip:554/stream or /video
         
         username = camera.username or settings.CAMERA_USERNAME
         password = camera.password or settings.CAMERA_PASSWORD
-        ## TODO: THIS IS FOR RTSP PROTOCOL
-        if camera.protocol == "rtsp":
-            # TODO: UPDATE THE URL FOR THAT SPECIFIC CCTV CAMERA
-            
-            #TODO:  FOR DEMO WE ARE USING HTTP PROTOCOL FOR PRODUCTION UPDATE CODE FOR RTSP PROTOCOL
+        protocol = camera.protocol
+        route = ""
+        if camera.protocol == "rtsp" and camera.model:
+            # TODO: UPDATE THE URL FOR THAT SPECIFIC CCTV CAMERA 
             #url = f"rtsp://{camera.ip_address}:{camera.port}/h264.sdp"
-            url = f"http://{username}:{password}@{camera.ip_address}:{camera.port}"
-            
-            # TODO : CHANGE THE URL LATER FOR STRAMING DIFFERENT CHANNELS
+            camera_model = camera.model.lower()
+            # Axis Communications P3818-PVE CCTV CAMERA
+            if "axispve" in camera_model:
+                route = "axis-media/media.amp?camera=1&videocodec=h264"
+            # for Hikvision Pro DS-2DE7A225IW-AEB CCTV CAMERA
+            elif "hikvision" in camera_model:
+                route = "Streaming/Channels/101"
+            # for Dahua WizMind S Series 4K CCTV CAMERA
+            elif "dahua" in camera_model:
+                route = "cam/realmonitor?channel=1&subtype=0"
+            elif "ipwebcam" in camera_model:
+                route = "video"
+            # chaaper camers TP-Link Tapo C200 for local
+            elif "local" in camera_model:
+                route = "/stream1"
 
-            # for  Hikvision brand CCTV CAMERA
-            if camera.model and "hikvision" in camera.model.lower():
-                url += "/Streaming/Channels/101"
-            # for  Hikvision brand DAHUA CAMERA
-            elif camera.model and "dahua" in camera.model.lower():
-                url += "/cam/realmonitor?channel=1&subtype=0"
-            # for testing with ip webcam using mobile phone
-            else:
-                url += "/video"
-
-            print("(_build_camera_url) URL GENERATED ::: ",url)
-            return url
-        elif camera.protocol == "http":
-            url = f"http://{username}:{password}@{camera.ip_address}:{camera.port}"
-
-            #TODO: for differnet model we have to update the route 
-            # for testing purpose we are using ip webcam that has /video route
-            url += "/video"
-
-            return url
+        elif camera.protocol == "http" and camera.model:
+            camera_model = camera.model.lower()
+            # Axis Communications P3818-PVE CCTV CAMERA
+            if "axispve" in camera_model:
+                route = "axis-cgi/mjpeg/video.cgi?camera=1"
+            # for Hikvision Pro DS-2DE7A225IW-AEB CCTV CAMERA
+            elif "hikvision" in camera_model:
+                route = "ISAPI/Streaming/channels/102/httpPreview"
+            # for Dahua WizMind S Series 4K CCTV CAMERA
+            elif "dahua" in camera_model:
+                route = "cgi-bin/mjpg/video.cgi?channel=1&subtype=1"
+            # Mobile camera steam using IP-WEBCAM Application
+            elif "ipwebcam" in camera_model:
+                route = "video"
+            elif "local" in camera_model:
+                route = "set for local camera"
         
-        return ""
+        camera_url = f"{protocol}://{username}:{password}@{camera.ip_address}:{camera.port}/{route}"
+        return camera_url
 
     ## deamon service of camera handling the straming
     @classmethod
-    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",model_name: str=None,conf:float=0.4):
+    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",agent_file_name: str=None,agent_name: str=None,conf:float=0.4):
         """
         Worker thread for continuous camera frame capture
         """
@@ -140,9 +164,9 @@ class CameraManager:
         fps_start_time = datetime.now()
         fps_frame_counter = 0
         annotated_frame_counter = 0
-        model = None
-        if model_name:
-            model = TrafficModel(model_name=model_name,conf=conf)
+        agent = None
+        if agent_file_name:
+            agent = TrafficModel(agent_file_name,agent_name,conf=conf)
        
         while not cls.stop_events[camera_id].is_set():
             try:
@@ -175,13 +199,12 @@ class CameraManager:
                     cls.camera_status[camera_id] = CameraStatusSchema.ONLINE
                     logger.info(f"Camera {camera_id} connected successfully")
 
-                    # TODO : use when you need to store the video file
                     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
                     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
                     fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
                     if fps <= 0 or fps > 60: fps = 30
                     
-                    # TODO : add the video storing later
+                  
                     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
                     save_path = os.path.join(save_dir, f"_{timestamp_str}.mp4")
                     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -206,21 +229,22 @@ class CameraManager:
                 # display_frame = cv2.resize(frame, (800,800))
                 # cv2.imshow("cemera feed", display_frame)
                 # cv2.waitKey(1)
-                # TODO: later store the video to local for future reference
+
                 if video_writer is not None:
                     video_writer.write(frame)
 
                 camera_info = cls.active_cameras[camera_id]
 
-                if model_name:
+                if agent_file_name:
                     try:
-                        annotated = model.infer(frame)
+                        annotated = agent.predict(frame)
                         annotated_frame_counter += 1
                         camera_info["annotated_frame_count"] = annotated_frame_counter
                         camera_info["last_annotated_frame"] = annotated
                     except Exception as e:
                         camera_info["last_annotated_frame"] = frame
                         logger.error(f"{camera_id} YOLO model failed")
+                        print(e)
 
                 # Update camera info
                 camera_info["last_frame"] = frame
@@ -256,29 +280,6 @@ class CameraManager:
             cap.release()
         if video_writer:
             video_writer.release()
-
-    """
-    @classmethod
-    async def get_frame(cls, camera_id: str, timeout: float = 0.1) -> Optional[np.ndarray]:
-        try:
-            if camera_id not in cls.frame_buffers:
-                logger.error(f"Camera {camera_id} not found")
-                return None
-            
-            # Try to get frame from buffer
-            frame = cls.frame_buffers[camera_id].get(timeout=timeout)
-            return frame
-            
-        except queue.Empty:
-            # Fallback to last frame
-            camera_info = cls.active_cameras.get(camera_id)
-            if camera_info:
-                return camera_info.get("last_frame")
-            return None
-        except Exception as e:
-            logger.error(f"Error getting frame from camera {camera_id}: {str(e)}")
-            return None
-    """
 
     @classmethod
     async def get_camera_info(cls, camera_id: str) -> Dict[str, Any]:

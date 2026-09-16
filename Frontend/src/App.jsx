@@ -2,25 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import CameraFeed from './components/CameraFeed.jsx';
-import CameraSelector from './components/CameraSelector.jsx';
+// Components import
+import CameraLiveFeed from './components/CameraLiveFeed.jsx';
 import AgentPanel from './components/AgentPanel.jsx';
 import AnalysisResults from './components/AnalysisResult.jsx';
 import VideoControls from './components/VideoControls.jsx';
 import ProcessingSettings from './components/ProcessingSettings.jsx';
 import Header from './components/Header.jsx';
 
-import { useCameraStream } from './hooks/useCameraStream.jsx';
+// Hooks import
+import { useCameraStream } from './hooks/useCameraStream.js';
 import { useWebSocket } from './hooks/useWebSocket.jsx';
-import { useAgents } from './hooks/useAgents.jsx';
+import { useAgents } from './hooks/useAgents.js';
+import { useTheme } from './hooks/useTheme.js';
 // import LiveStream from "./components/VideoStream.jsx"
 
-import { useTheme } from './services/useThemeStore';
 
 export default function App() {
-  const theme = useTheme((state)=> state.theme)
+  const theme = useTheme((state) => state.theme)
 
-  const isDarkMode = theme ==="dark"?true:false;
+  const isDarkMode = theme === "dark" ? true : false;
 
 
   const [selectedCamera, setSelectedCamera] = useState(null);
@@ -57,11 +58,6 @@ export default function App() {
     isProcessing
   } = useAgents();
 
-  const {
-    connect: connectWebSocket,
-    disconnect: disconnectWebSocket,
-    isConnected: wsConnected
-  } = useWebSocket();
 
   const handleCameraSelect = async (cameraId) => {
     if (selectedCamera) {
@@ -141,7 +137,7 @@ export default function App() {
           <main className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(340px,0.95fr)]">
             <div className="space-y-5">
               <section className="rounded-[28px] border border-slate-200/80 bg-white/80 p-3  dark:border-slate-800 dark:bg-slate-900/80 sm:p-4">
-                <CameraFeed
+                <CameraLiveFeed
                   videoRef={videoRef}
                   isConnected={isConnected}
                   error={cameraError}
@@ -186,8 +182,8 @@ export default function App() {
               />
             </aside>
           </main>
-          
-         
+
+
         </div>
       </div>
       {/* SETTIGN THE TOASIFY THEME DYNAMICALLY */}

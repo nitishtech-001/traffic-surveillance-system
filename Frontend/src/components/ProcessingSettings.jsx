@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-
+import { useCamera } from '../hooks/useCamera.js';
 export default function ProcessingSettings({ settings, onSettingsChange }) {
+  const {currentCamera} = useCamera()
+
   const [localSettings, setLocalSettings] = useState({
     processingInterval: settings?.processingInterval || 1000,
     confidenceThreshold: settings?.confidenceThreshold || 0.5,
@@ -16,7 +18,7 @@ export default function ProcessingSettings({ settings, onSettingsChange }) {
       onSettingsChange(newSettings);
     }
   };
-
+  console.log("Current camers ", currentCamera)
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">

@@ -1,4 +1,3 @@
-import React from 'react';
 import { FaCamera, FaPause, FaStop, FaSync, FaVideo } from 'react-icons/fa';
 
 export default function VideoControls({

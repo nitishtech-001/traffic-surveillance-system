@@ -1,9 +1,9 @@
-import { useTheme } from '../services/useThemeStore.js'
+import { useTheme } from '../hooks/useTheme.js'
 import CameraSelector from './CameraSelector.jsx'
 
 export default function Header() {
-    const toggleTheme = useTheme((state)=>state.toggleTheme)
-    const theme = useTheme((state)=>state.theme)
+    const toggleTheme = useTheme((state) => state.toggleTheme)
+    const theme = useTheme((state) => state.theme)
 
     const isConnected = true
     const wsConnected = true
@@ -40,14 +40,14 @@ export default function Header() {
 
                     <button
                         type="button"
-                        onClick={()=>toggleTheme()}
+                        onClick={() => toggleTheme()}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-700 cursor-pointer"
                     >
-                        {theme==="light" ? '☀️ Light' : '🌙 Dark'}
+                        {theme === "light" ? '☀️ Light' : '🌙 Dark'}
                     </button>
 
                     <CameraSelector />
-                    
+
                 </div>
             </div>
         </header>

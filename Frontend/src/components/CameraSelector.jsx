@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { useCameraStore } from '../services/useCameraStore';
+import { useCamera } from '../hooks/useCamera';
 
 
 const input_custom_style = `rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-500/20`
 
 export default function CameraSelector() {
-    const currentCamera = useCameraStore((state) => state.currentCamera)
-    const cameraList = useCameraStore((state) => state.cameraList)
-    const getCameraList = useCameraStore((state) => state.getCameraList)
-    const addCamera = useCameraStore((state) => state.addCamera)
-    const setCurrentCamera = useCameraStore((state) => state.setCurrentCamera)
+    const currentCamera = useCamera((state) => state.currentCamera)
+    const cameraList = useCamera((state) => state.cameraList)
+    const getCameraList = useCamera((state) => state.getCameraList)
+    const addCamera = useCamera((state) => state.addCamera)
+    const setCurrentCamera = useCamera((state) => state.setCurrentCamera)
 
     const [addCameraPopup, setAddCameraPopup] = useState(false);
     const [newCamera, setNewCamera] = useState({
         id: '',
         name: '',
+        model: '',
         ip_address: '',
         port: 8080,
         username: '',
         password: '',
-        protocol: "http"
+        protocol: "http",
+        agent: ""
     });
 
     useEffect(() => {
@@ -30,6 +32,7 @@ export default function CameraSelector() {
     const handleChange = (e) => {
         const id = e.target.id
         const value = e.target.value
+        console.log(id, value)
         setNewCamera(prevValue => ({ ...prevValue, [id]: value }))
     }
 
@@ -39,16 +42,20 @@ export default function CameraSelector() {
             if (!newCamera.id || !newCamera.name || !newCamera.ip_address || !newCamera.port) {
                 toast.error("camera id, name, ip address and port number is required!!")
             }
+            console.log(newCamera)
             await addCamera(newCamera)
             setAddCameraPopup(false);
             getCameraList();
             setNewCamera({
                 id: '',
                 name: '',
+                model: '',
                 ip_address: '',
                 port: 8080,
                 username: '',
-                password: ''
+                password: '',
+                agent: '',
+                protocol: ''
             });
         } catch (error) {
             console.error('Error adding camera:', error);
@@ -132,6 +139,22 @@ export default function CameraSelector() {
                                 onChange={handleChange}
                                 className={input_custom_style}
                             />
+
+                            <select
+                                id='model'
+                                value={newCamera.model}
+                                onChange={handleChange}
+                                className={`col-span-2 ${input_custom_style}`}
+                                required
+                            >
+                                <option value="" >Select Camera Model</option>
+                                <option value="axispve">Axis Communications P3818-PVE</option>
+                                <option value="hikvision">Hikvision Pro DS-2DE7A225IW-AEB</option>
+                                <option value="dahua">Dahua WizMind S Series 4K</option>
+                                <option value="ipwebcam">IP-WebCam</option>
+                                <option value="local">Local Camera</option>
+                            </select>
+
                             <input
                                 type="text"
                                 placeholder="IP Address"
@@ -162,8 +185,32 @@ export default function CameraSelector() {
                                 id='password'
                                 value={newCamera.password}
                                 onChange={handleChange}
-                                className={`sm:col-span-2 ${input_custom_style}`}
+                                className={input_custom_style}
                             />
+                            <select
+                                id='protocol'
+                                value={newCamera.protocol}
+                                onChange={handleChange}
+                                className={input_custom_style}
+                            >
+                                <option value="http">HTTP</option>
+                                <option value="rtsp">RTSP</option>
+                            </select>
+
+                            <select
+                                id='agent'
+                                value={newCamera.agent}
+                                onChange={handleChange}
+                                className={`col-span-2 ${input_custom_style}`}
+                            >
+                                <option value="" >Select Agent To Run On Camera</option>
+                                <option value="object-detection">Agent: Object Detection</option>
+                                <option value="face-detection">Agent: Face Detection</option>
+                                <option value="licenseplate-detection">Agent: License Plate</option>
+                                <option value="motion-detection">Agent: Motion Tracking</option>
+                                <option value="text-detection">Agent: Text Recognition</option>
+                            </select>
+
 
                             <div className="mt-5 col-span-2 flex justify-end gap-3">
                                 <button

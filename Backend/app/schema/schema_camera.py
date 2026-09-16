@@ -20,9 +20,9 @@ class CameraSchema(BaseModel):
     password: Optional[str] = None
     protocol: str = "rtsp"
     model: Optional[str] = None
+    agent: Optional[str]
     status: CameraStatusSchema = CameraStatusSchema.OFFLINE
     stream_url: Optional[str] = None
-    hls_url: Optional[str] = None
     last_connected: Optional[datetime] = None
     created_at: datetime = datetime.now()
     updated_at: datetime = datetime.now()

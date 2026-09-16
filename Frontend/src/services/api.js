@@ -9,16 +9,10 @@ const api = axios.create({
     },
 });
 
-// Camera endpoints
-export const getCameras = () => api.get('/api/cameras/list');
-export const addCamera = (camera) => api.post('/api/cameras/add', camera);
-export const connectCamera = (cameraId) => api.post(`/api/cameras/${cameraId}/connect`);
-export const disconnectCamera = (cameraId) => api.post(`/api/cameras/${cameraId}/disconnect`);
 
 // Stream endpoints
 export const startStream = (cameraId) => api.post(`/api/streams/${cameraId}/start`);
 export const stopStream = (cameraId) => api.post(`/api/streams/${cameraId}/stop`);
-export const getStreamUrl = (cameraId) => api.get(`/api/streams/${cameraId}/playlist.m3u8`);
 
 // Agent endpoints
 export const getAgents = () => api.get('/api/agents/list');

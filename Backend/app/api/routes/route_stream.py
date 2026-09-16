@@ -1,12 +1,8 @@
 # backend/app/api/routes/stream.py
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import FileResponse, StreamingResponse
-from typing import Dict, Any
-import os
+from fastapi import APIRouter, HTTPException
 
 from app.services.camera_manager import CameraManager
 from app.services.stream_manager import StreamManager
-from app.api.dependencies.authenticate import get_current_user
 
 
 router = APIRouter()

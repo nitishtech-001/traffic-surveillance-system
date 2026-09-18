@@ -1,7 +1,7 @@
 # backend/app/services/camera_manager.py
 import logging
-import numpy as np
-from typing import Dict, Optional, List, Any
+from fastapi import HTTPException
+from typing import Dict, List, Any
 from datetime import datetime
 from threading import Thread, Event
 import queue
@@ -48,12 +48,14 @@ class CameraManager:
                 "fps": 0,
                 "frame_count": 0,
                 "connected": False,
-                "retry_count": 0
+                "retry_count": 0,
+                "conf": 0.5,
+                "interval": 100/1000 # in milisecond for processing frame
             }
             agent_file_name = ""
             agent_name = ""
             save_dir = os.getcwd()+"/uploads"
-            conf = 0.5
+            conf = 0.5 # hardcode value of confidence
             if camera.agent:
                 ## TODO : UPDATE this for new model you use
                 user_agent_name = camera.agent.lower()
@@ -72,11 +74,14 @@ class CameraManager:
                 elif "text-detection" in user_agent_name:
                     agent_file_name = "textdetection.pt"
                     agent_name = "text-detection"
+                else:
+                    agent_file_name = ""
+                    agent_name = ""
 
             # Start camera thread
             cls.camera_threads[camera_id] = Thread(
                 target=cls._camera_worker,
-                args=(camera_id, camera_url,save_dir, agent_file_name,agent_name,conf),
+                args=(camera_id, camera_url,save_dir, agent_file_name,agent_name),
                 daemon=True
             )
             cls.camera_threads[camera_id].start()
@@ -147,7 +152,7 @@ class CameraManager:
 
     ## deamon service of camera handling the straming
     @classmethod
-    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",agent_file_name: str=None,agent_name: str=None,conf:float=0.4):
+    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",agent_file_name: str=None,agent_name: str=None):
         """
         Worker thread for continuous camera frame capture
         """
@@ -155,6 +160,8 @@ class CameraManager:
         video_writer = None
         retry_attempts = 0
         max_retries = settings.MAX_RETRIES
+        predict_interval = time.time()
+
         save_dir += f"/{camera_id}"
         try:
             os.makedirs(save_dir,exist_ok=True)
@@ -165,8 +172,8 @@ class CameraManager:
         fps_frame_counter = 0
         annotated_frame_counter = 0
         agent = None
-        if agent_file_name:
-            agent = TrafficModel(agent_file_name,agent_name,conf=conf)
+        
+        agent = TrafficModel(agent_file_name,agent_name)
        
         while not cls.stop_events[camera_id].is_set():
             try:
@@ -234,13 +241,13 @@ class CameraManager:
                     video_writer.write(frame)
 
                 camera_info = cls.active_cameras[camera_id]
-
-                if agent_file_name:
+                if predict_interval+camera_info['interval'] <= time.time():
                     try:
-                        annotated = agent.predict(frame)
+                        annotated = agent.predict(frame,camera_info['conf'])
                         annotated_frame_counter += 1
                         camera_info["annotated_frame_count"] = annotated_frame_counter
                         camera_info["last_annotated_frame"] = annotated
+                        predict_interval = time.time()
                     except Exception as e:
                         camera_info["last_annotated_frame"] = frame
                         logger.error(f"{camera_id} YOLO model failed")
@@ -389,4 +396,11 @@ class CameraManager:
             logger.error(f"Error updating camera settings: {str(e)}")
             return False
 
-    
+    @classmethod
+    async def update_conf_interval(cls, camera_id,conf, interval):
+        if camera_id in cls.camera_status and cls.camera_status[camera_id] == CameraStatusSchema.STREAMING:
+            cls.active_cameras[camera_id]['conf'] = conf
+            cls.active_cameras[camera_id]['interval'] = interval
+            return True
+        
+        raise HTTPException(404,"camera id not found.")

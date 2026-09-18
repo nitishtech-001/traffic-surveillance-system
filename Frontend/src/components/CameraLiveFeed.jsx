@@ -40,9 +40,9 @@ export default function CameraLiveFeed() {
             videoRef.current.srcObject = streamObject;
         }
     }, [streamObject]);
-    console.log(currentCamera)
+ 
     return (
-        <div className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 p-4 shadow-xl">
+        <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 p-2 shadow-xl">
             <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-semibold text-slate-200">
                     {currentCamera?.name || "Unknown Camera"} - Live Feed
@@ -53,7 +53,7 @@ export default function CameraLiveFeed() {
                 </span>
             </div>
 
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black flex items-center justify-center">
+            <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-black flex items-center justify-center">
                 <video
                     ref={videoRef}
                     autoPlay

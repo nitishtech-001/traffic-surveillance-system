@@ -13,7 +13,7 @@ class TrafficModel:
     Returns an annotated BGR frame of the same shape.
     """
 
-    def __init__(self, agent_file_name: str,agent_name: str, conf: float = 0.35,
+    def __init__(self, agent_file_name: str,agent_name: str,
                  device: str = "cuda"):
 
         if torch.cuda.is_available():
@@ -22,23 +22,25 @@ class TrafficModel:
             print("MODEL IS RUNNING ON CPU MINIMIZE THE LOAD")
 
         agent_path = os.getcwd()+f"/ai_models/{agent_file_name}"
-        if os.path.exists(agent_path):
+        if os.path.exists(agent_path) and agent_name != "":
             logger.info(f"Agent path is valid {agent_path}")
             try:
                 self.agent = YOLO(agent_path,task='detect')
-                self.agent.to(device)
-                self.conf = conf        
+                self.agent.to(device)      
                 self.device = device
                 self.agent_name = agent_name
                 logger.info(f"Agent initalized... {agent_path}")
             except Exception as e:
                 print("Agent Initalization Error ", e)
-        else:
+        elif agent_file_name == "" and agent_name == "":
+            self.agent = None
+            self.device = None
+            self.agent_name = None
             logger.info(f"Agent path is invalid {agent_path}")
         
-    def predict(self,bgr_frame: np.ndarray) -> np.ndarray:
+    def predict(self,bgr_frame: np.ndarray,conf:float = 0.35) -> np.ndarray:
         if self.agent_name == "object-detection":
-           return self.predict_object(bgr_frame)
+           return self.predict_object(bgr_frame,conf)
         
         elif self.agent_name == "face-detection":
             return self.predict_face(bgr_frame)
@@ -51,15 +53,17 @@ class TrafficModel:
         
         elif self.agent_name == "text-detection":
             return self.predict_text(bgr_frame)
+        else:
+            return bgr_frame
 
-    def predict_object(self, bgr_frame: np.ndarray) -> np.ndarray:
+    def predict_object(self, bgr_frame: np.ndarray,conf) -> np.ndarray:
         """
         Run detection + plot the boxes on the frame.
         Ultralytics .plot() returns a BGR numpy array when the input is BGR.
         """
         results = self.agent.predict(
             source=bgr_frame,
-            conf=self.conf,
+            conf=conf,
             device=self.device,
             verbose=False,
         )

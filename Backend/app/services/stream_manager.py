@@ -4,7 +4,6 @@ import subprocess
 import os
 import logging
 from typing import Dict, Optional, Any
-from datetime import datetime
 import signal
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from .video_capture import WebRTCLiveTrack

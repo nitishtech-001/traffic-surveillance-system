@@ -27,12 +27,11 @@ export default function CameraSelector() {
 
     useEffect(() => {
         getCameraList();
-    }, []);
+    }, [currentCamera]);
 
     const handleChange = (e) => {
         const id = e.target.id
         const value = e.target.value
-        console.log(id, value)
         setNewCamera(prevValue => ({ ...prevValue, [id]: value }))
     }
 
@@ -42,7 +41,6 @@ export default function CameraSelector() {
             if (!newCamera.id || !newCamera.name || !newCamera.ip_address || !newCamera.port) {
                 toast.error("camera id, name, ip address and port number is required!!")
             }
-            console.log(newCamera)
             await addCamera(newCamera)
             setAddCameraPopup(false);
             getCameraList();
@@ -80,7 +78,7 @@ export default function CameraSelector() {
                     {cameraList && cameraList.map((camera, index) => (
                         <option key={camera.id || index} value={index}>
                             {camera.id} - {camera.name} - {camera.ip_address}
-                            {camera.status === 'online' ? ' 🟢' : ' 🔴'}
+                            {camera.status === 'streaming' ? ' 🟢' : ' 🔴'}
                         </option>
                     ))}
                 </select>

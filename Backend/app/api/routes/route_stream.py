@@ -23,11 +23,8 @@ async def start_stream(
         camera_info = await CameraManager.get_camera_info(camera_id)
         if not camera_info:
             raise HTTPException(status_code=404, detail="Camera not found")
-        sdp = "nk"
-        type = "offer"
         
         # Get RTSP URL
-        
 
         camera_url = CameraManager.active_cameras.get(camera_id, {}).get("camera_url")
         print(f"Camera id {camera_id} and camera url {camera_url}")

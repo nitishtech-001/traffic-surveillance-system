@@ -4,15 +4,18 @@ from fastapi import HTTPException
 from typing import Dict, List, Any
 from datetime import datetime
 from threading import Thread, Event
+import asyncio
 import queue
 import time
 import cv2
 import os
 from app.schema.schema_camera import CameraSchema, CameraStatusSchema
-from app.models.model_traffic import TrafficModel
+from app.services.agent_orchestrator import AgentOrchestrator
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+# making the object of agentorchestrator
+agent_orchestrator = AgentOrchestrator()
 
 class CameraManager:
     """
@@ -24,6 +27,9 @@ class CameraManager:
     # frame_buffers: Dict[str, queue.Queue] = {}
     stop_events: Dict[str, Event] = {}
     camera_status: Dict[str, CameraStatusSchema] = {}
+
+    def __init__(self):
+        logger.info("Camera Manager Initialize succesfully!")
 
     @classmethod
     async def add_camera(cls, camera: CameraSchema) -> bool:
@@ -39,6 +45,9 @@ class CameraManager:
             # Create stop event
             cls.stop_events[camera_id] = Event()
             
+            save_dir = os.getcwd()+"/uploads"
+
+
             # Store camera info
             cls.active_cameras[camera_id] = {
                 "camera": camera,
@@ -48,40 +57,15 @@ class CameraManager:
                 "fps": 0,
                 "frame_count": 0,
                 "connected": False,
-                "retry_count": 0,
                 "conf": 0.5,
-                "interval": 100/1000 # in milisecond for processing frame
+                "interval": 100/1000,
+                "retry_count": 0, 
             }
-            agent_file_name = ""
-            agent_name = ""
-            save_dir = os.getcwd()+"/uploads"
-            conf = 0.5 # hardcode value of confidence
-            if camera.agent:
-                ## TODO : UPDATE this for new model you use
-                user_agent_name = camera.agent.lower()
-                if "object-detection" in user_agent_name:
-                    agent_file_name = "nightvision.pt"
-                    agent_name = "object-detection"
-                elif "face-detection" in user_agent_name:
-                    agent_file_name = "facedetection.pt"
-                    agent_name = "face-detection"
-                elif "licenseplate-detection" in user_agent_name:
-                    agent_file_name = "licenseplate.pt"
-                    agent_name = "licenseplate-detection"
-                elif "motion-detection" in user_agent_name:
-                    agent_file_name = "motiondetection.pt"
-                    agent_name = "motion-detection"
-                elif "text-detection" in user_agent_name:
-                    agent_file_name = "textdetection.pt"
-                    agent_name = "text-detection"
-                else:
-                    agent_file_name = ""
-                    agent_name = ""
 
             # Start camera thread
             cls.camera_threads[camera_id] = Thread(
                 target=cls._camera_worker,
-                args=(camera_id, camera_url,save_dir, agent_file_name,agent_name),
+                args=(camera_id, camera_url,save_dir),
                 daemon=True
             )
             cls.camera_threads[camera_id].start()
@@ -152,7 +136,7 @@ class CameraManager:
 
     ## deamon service of camera handling the straming
     @classmethod
-    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads",agent_file_name: str=None,agent_name: str=None):
+    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads"):
         """
         Worker thread for continuous camera frame capture
         """
@@ -171,9 +155,7 @@ class CameraManager:
         fps_start_time = datetime.now()
         fps_frame_counter = 0
         annotated_frame_counter = 0
-        agent = None
         
-        agent = TrafficModel(agent_file_name,agent_name)
        
         while not cls.stop_events[camera_id].is_set():
             try:
@@ -241,12 +223,15 @@ class CameraManager:
                     video_writer.write(frame)
 
                 camera_info = cls.active_cameras[camera_id]
+                
                 if predict_interval+camera_info['interval'] <= time.time():
                     try:
-                        annotated = agent.predict(frame,camera_info['conf'])
+                        result = agent_orchestrator.process_frame(frame,camera_info['conf'])
+                        if result is None:
+                            raise Exception("Agent is Not active")
                         annotated_frame_counter += 1
                         camera_info["annotated_frame_count"] = annotated_frame_counter
-                        camera_info["last_annotated_frame"] = annotated
+                        camera_info["last_annotated_frame"] = result["annotated_frame"]
                         predict_interval = time.time()
                     except Exception as e:
                         camera_info["last_annotated_frame"] = frame
@@ -396,11 +381,3 @@ class CameraManager:
             logger.error(f"Error updating camera settings: {str(e)}")
             return False
 
-    @classmethod
-    async def update_conf_interval(cls, camera_id,conf, interval):
-        if camera_id in cls.camera_status and cls.camera_status[camera_id] == CameraStatusSchema.STREAMING:
-            cls.active_cameras[camera_id]['conf'] = conf
-            cls.active_cameras[camera_id]['interval'] = interval
-            return True
-        
-        raise HTTPException(404,"camera id not found.")

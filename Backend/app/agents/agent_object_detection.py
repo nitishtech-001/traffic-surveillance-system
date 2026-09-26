@@ -5,10 +5,10 @@ from typing import Dict, Any, List
 import torch
 from pathlib import Path
 import logging
-
 from app.agents.agent_base import BaseAgent
 from app.schema.schema_detection import ObjectDetectionSchema, BoundingBoxSchema
 from app.core.config import settings
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +37,12 @@ class ObjectDetectionAgent(BaseAgent):
             # Load YOLO model - using ultralytics
             from ultralytics import YOLO
             
-            model_path = Path(settings.MODELS_PATH) / settings.YOLO_MODEL
+            model_path = Path(settings.AGENT_MODEL_PATH)/ Path(settings.AGENT_MODEL_OBJECT_DETECTION)
+            print("CURRENT WORKING DIRECTORY ::: ",os.getcwd())
+            print("MODEL PATH IS :::: ",model_path)
             if not model_path.exists():
                 logger.info(f"Downloading YOLO model from {model_path}")
-                self.model = YOLO('yolov8n.pt')  # Downloads if not exists
+                # self.model = YOLO('yolov8n.pt')  # Downloads if not exists
             else:
                 self.model = YOLO(str(model_path))
             
@@ -58,59 +60,75 @@ class ObjectDetectionAgent(BaseAgent):
             logger.error(f"Failed to initialize Object Detection Agent: {str(e)}")
             return False
     
-    async def process(self, frame: np.ndarray) -> Dict[str, Any]:
+    def process(self, frame: np.ndarray,conf:float) -> Dict[str, Any]:
         """
         Process frame and detect objects
         """
-        if not self.is_initialized:
-            raise RuntimeError("Agent not initialized")
+        # if not self.is_initialized:
+        #     raise RuntimeError("Agent not initialized")
         
-        # Get confidence threshold from config or use default
-        confidence_threshold = self.config.get("confidence", settings.CONFIDENCE_THRESHOLD)
+        # # Get confidence threshold from config or use default
+        # confidence_threshold = conf
         
-        # Run inference
-        results = self.model(frame, conf=confidence_threshold, verbose=False)
+        # # Run inference
+        # results = self.model(frame, conf=confidence_threshold, verbose=False)
         
-        detections = []
-        total_objects = 0
-        
-        if results and len(results) > 0:
-            result = results[0]
-            
-            # Extract bounding boxes, classes, and confidences
-            if result.boxes is not None:
-                boxes = result.boxes.xyxy.cpu().numpy()
-                confidences = result.boxes.conf.cpu().numpy()
-                class_ids = result.boxes.cls.cpu().numpy()
+        # detections = []
+        # total_objects = 0
+        # class_counts = {}        
+        # if results and len(results) > 0:
+        #     result = results[0]
+
+        #     # Extract bounding boxes, classes, and confidences
+        #     if result.boxes is not None:
+        #         boxes = result.boxes.xyxy.cpu().numpy()
+        #         confidences = result.boxes.conf.cpu().numpy()
+        #         class_ids = result.boxes.cls.cpu().numpy()
                 
-                for box, conf, class_id in zip(boxes, confidences, class_ids):
-                    x1, y1, x2, y2 = box
-                    class_name = self.class_names.get(int(class_id), "unknown")
+        #         for box, conf, class_id in zip(boxes, confidences, class_ids):
+        #             x1, y1, x2, y2 = box
+        #             class_name = self.class_names.get(int(class_id), "unknown")
                     
-                    detection = ObjectDetectionSchema(
-                        class_name=class_name,
-                        class_id=int(class_id),
-                        bbox=BoundingBoxSchema(
-                            x1=float(x1),
-                            y1=float(y1),
-                            x2=float(x2),
-                            y2=float(y2),
-                            confidence=float(conf)
-                        ),
-                        confidence=float(conf)
+        #             detection = ObjectDetectionSchema(
+        #                 class_name=class_name,
+        #                 class_id=int(class_id),
+        #                 bbox=BoundingBoxSchema(
+        #                     x1=float(x1),
+        #                     y1=float(y1),
+        #                     x2=float(x2),
+        #                     y2=float(y2),
+        #                     confidence=float(conf)
+        #                 ),
+        #                 confidence=float(conf)
+        #             )
+        #             detections.append(detection)
+        #             total_objects += 1
+        #             class_counts[class_id] = class_counts.get(class_id,0)+1
+
+
+        # annotated_frame = self.draw_detections(frame,detections)
+
+        # return {
+        #     "total_objects": total_objects,
+        #     "class_counts": class_counts,
+        #     "annotated_frame": annotated_frame,
+        #     "frame_info": {
+        #         "width": frame.shape[1],
+        #         "height": frame.shape[0],
+        #     }
+        # }
+        if self.is_initialized:
+            results = self.model.predict(
+                        source=frame,
+                        conf=conf,
+                        device=self.device,
+                        verbose=False,
                     )
-                    detections.append(detection)
-                    total_objects += 1
-        
-        return {
-            "detections": [d.dict() for d in detections],
-            "total_objects": total_objects,
-            "frame_info": {
-                "width": frame.shape[1],
-                "height": frame.shape[0],
-                "channels": frame.shape[2] if len(frame.shape) == 3 else 1
-            }
-        }
+            annotatd_frame = results[0].plot()
+        else:
+            print("Model is not initailize check it again")
+            annotatd_frame = frame
+        return annotatd_frame
     
     async def cleanup(self) -> bool:
         """

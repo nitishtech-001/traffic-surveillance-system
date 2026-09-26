@@ -1,11 +1,9 @@
 # backend/app/core/config.py
-from pydantic_settings import BaseSettings
-from typing import Optional
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-
-class Settings(BaseSettings):
+class Settings:
     # Application
     APP_NAME: str = "Video Analysis System"
     APP_VERSION: str = "1.0.0"
@@ -28,17 +26,15 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = 3
     
     # AI Models
-    MODELS_PATH: str = "./ai_models"
-    YOLO_MODEL: str = "nightvision.pt"
+    AGENT_MODEL_PATH: str = os.path.join(os.getcwd()+"/ai_models")
+    AGENT_MODEL_OBJECT_DETECTION: str = "object_detection.pt"
+    # add other agent_model_names
     CONFIDENCE_THRESHOLD: float = 0.5
     
     # Streaming
-    HLS_SEGMENT_DURATION: int = 1
-    HLS_SEGMENT_COUNT: int = 3
+    WEBRTC_DURATION: int = 1
     MAX_STREAMS: int = 10
     
-    # Redis
-    REDIS_URL: Optional[str] = None
     
     # WebSocket
     WS_MAX_SIZE: int = 1048576

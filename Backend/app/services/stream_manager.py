@@ -21,7 +21,7 @@ class StreamManager:
     stream_processes: Dict[str, subprocess.Popen] = {}
     
     def __init__(self):
-        print("Stream manager initialized")
+        logger.info("Stream Manager Initialize succesfully!")
    
     @classmethod
     async def start_stream(cls, camera_id: str, sdp: str, type: str):

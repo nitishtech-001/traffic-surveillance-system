@@ -7,7 +7,7 @@ import logging
 from contextlib import asynccontextmanager
 
 # Routes
-from app.api.routes import route_agents, route_auth, route_camera, route_stream, route_websocket, route_process
+from app.api.routes import route_agents, route_auth, route_camera, route_stream, route_websocket
 
 # Configuration
 from app.core.config import settings
@@ -44,14 +44,9 @@ async def lifespan(app: FastAPI):
     """Lifespan manager for startup and shutdown events"""
     # Startup
     logger.info("Starting Video Analysis System...")
-    
-    # adding default agents
     await agent_orchestrator.initialize()
-    await agent_orchestrator.add_agent(AgentTypeSchema.OBJECT_DETECTION, {"confidence": 0.5})
-    await agent_orchestrator.add_agent(AgentTypeSchema.LICENSE_PLATE, {"languages": ["en"]})
-    await agent_orchestrator.add_agent(AgentTypeSchema.OBJECT_DETECTION)
 
-    logger.info(f"Initialized {len(agent_orchestrator.agents)} agents.")
+    logger.info(f"Number of Register Agents are ::::  {len(agent_orchestrator.agent_registry)} .")
 
     yield
     
@@ -84,13 +79,12 @@ app.include_router(route_camera.router, prefix="/api/cameras", tags=["Cameras"])
 
 app.include_router(route_stream.router, prefix="/api/streams", tags=["Streams"])
 
-app.include_router(route_auth.router, prefix="/api/auth", tags=["Register"])
+# app.include_router(route_auth.router, prefix="/api/auth", tags=["Register"]) NOT USED BECAUSE RUNNING LOCALY
 
 app.include_router(route_agents.router, prefix="/api/agents", tags=["Agents"])
 
 app.include_router(route_websocket.router, prefix="/api/ws", tags=["WebSocket"])
 
-app.include_router(route_process.router, prefix="/api/process", tags=["processing"])
 
 # Health check
 @app.get("/")

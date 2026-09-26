@@ -1,122 +1,164 @@
 import { create } from 'zustand';
 import { axiosInstance } from '../services/axiosInstance.js';
+import {toast} from "react-toastify"
 
-export const useAgents = create((set, get) => {
+export const useAgents = create((set, get) => ({
     // Use a private module-scoped variable for the interval ID to avoid re-renders
-    let continuousIntervalId = null;
+    continuousIntervalId : null,
 
-    return {
-        // Hardcoded static agent items
-        agents: [
-            { id: 'object-detection', name: 'Object Detection', icon: '🔍' },
-            { id: 'face-detection', name: 'Face Detection', icon: '👤' },
-            { id: 'license-plate', name: 'License Plate', icon: '🚗' },
-            { id: 'motion-tracking', name: 'Motion Tracking', icon: '🏞️' },
-            { id: 'text-recognition', name: 'Text Recognition', icon: '📝' }
-        ],
+    availableAgents: [
+        { id: 'object-detection', name: 'Object Detection', icon: '🔍' },
+        // { id: 'face-detection', name: 'Face Detection', icon: '👤' },
+        // { id: 'license-plate', name: 'License Plate', icon: '🚗' },
+        // { id: 'motion-tracking', name: 'Motion Tracking', icon: '🏞️' },
+        // { id: 'text-recognition', name: 'Text Recognition', icon: '📝' }
+    ],
+    // addedAgents: [],
+    activeAgents: new Set(),
+    agentStatus: {},
+    results: [],
+    isProcessing: false,
+    isContinuousRunning: false,
 
-        // Dynamic Application States
-        agentStatus: [],
-        results: [],
-        isProcessing: false,
-        isContinuousRunning: false,
+    // TODO : I am doping the add status, i already initilized all model in backend because it take less or minimal memory use ..
+    // addAgent : async (agentId,config)=>{
+    //     try{
+    //         const response = await axiosInstance.post(`/api/agents/add/${agentId}`,config)
+    //         if(response.data){
+    //             toast.success(response.data.message)
+    //             set((s)=>({addedAgents: [...s.addedAgents, agentId]}))
+    //             set((s)=>({agentStatus: {...s.agentStatus, [agentId]:"active"}}))
+    //             toast.success("Agent added succesfully!")
+    //         }else{
+    //             toast.warning("Response is emtpy while adding agent!!")
+    //         }
+    //     }catch(error){
+    //         toast.error("Agent added error...")
+    //         console.log(error)
+    //     }
+    // },
 
-        // HTTP Action: Fetch all agent statuses
-        loadAgents: async () => {
-            try {
-                const response = await axiosInstance.get('/api/agents'); // Adjust endpoints if necessary
-                set({ agentStatus: response.data || [] });
-            } catch (error) {
-                console.error('Error loading agents:', error);
+    // HTTP Action: Activate specific agent
+    activateAgent: async (agentId) => {
+        try {
+            const response = await axiosInstance.post(`/api/agents/${agentId}/activate`);
+            if(response.data){
+                toast.success(response.data.message)
+                const activeAgents = get().activeAgents
+                const updatesAgents = new Set([...activeAgents,agentId])
+                set({activeAgents: updatesAgents})
+                set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "processing" } }))
+                toast.success("Agent is now activated.")
+                toast.success("Agent is processing..")
+            }else{
+                toast.warning("response is empty during activating agents")
             }
-        },
-
-        // HTTP Action: Activate specific agent
-        activateAgent: async (agentId) => {
-            try {
-                await axiosInstance.post(`/api/agents/${agentId}/activate`);
-                await get().loadAgents(); // Reload statuses
-                return true;
-            } catch (error) {
-                console.error('Error activating agent:', error);
-                return false;
-            }
-        },
-
-        // HTTP Action: Deactivate specific agent
-        deactivateAgent: async (agentId) => {
-            try {
-                await axiosInstance.post(`/api/agents/${agentId}/deactivate`);
-                await get().loadAgents(); // Reload statuses
-                return true;
-            } catch (error) {
-                console.error('Error deactivating agent:', error);
-                return false;
-            }
-        },
-
-        // HTTP Action: Upload a frame for inference processing
-        processFrame: async (frame, cameraId) => {
-            set({ isProcessing: true });
-            try {
-                const response = await axiosInstance.post('/api/process-frame', { frame, cameraId });
-                const result = response.data;
-
-                set((state) => ({
-                    results: [
-                        {
-                            id: Date.now(),
-                            timestamp: new Date().toISOString(),
-                            cameraId,
-                            result
-                        },
-                        ...state.results
-                    ].slice(0, 100) // Keep the latest 100 entries
-                }));
-
-                return result;
-            } catch (error) {
-                console.error('Error processing frame:', error);
-                return null;
-            } finally {
-                set({ isProcessing: false });
-            }
-        },
-
-        // Continuous Frame Processing Controls
-        startContinuousProcessing: (captureFrame, cameraId, intervalMs) => {
-            // Clear any pre-existing timer loops
-            if (continuousIntervalId) {
-                clearInterval(continuousIntervalId);
-            }
-
-            set({ isContinuousRunning: true });
-
-            continuousIntervalId = setInterval(async () => {
-                const frame = captureFrame();
-                if (frame) {
-                    await get().processFrame(frame, cameraId);
-                }
-            }, intervalMs);
-        },
-
-        stopContinuousProcessing: () => {
-            if (continuousIntervalId) {
-                clearInterval(continuousIntervalId);
-                continuousIntervalId = null;
-            }
-            set({ isContinuousRunning: false });
-        },
-
-        // HTTP Action: Retrieve historic analytical logs for a camera
-        getResults: async (cameraId) => {
-            try {
-                const response = await axiosInstance.get(`/api/results/${cameraId}`);
-                return response.data;
-            } catch (error) {
-                console.error('Error getting results:', error);
-                return [];
-            }
+        } catch (error) {
+            console.error('Error activating agent:', error);
+            toast.error("May be server is not running...")
         }
-    };
-});
+    },
+
+    // HTTP Action: Deactivate specific agent
+    deactivateAgent: async (agentId) => {
+        try {
+            const response = await axiosInstance.post(`/api/agents/${agentId}/deactivate`);
+            if (response.data) {
+                toast.success(response.data.message)
+                const activeAgents = get().activeAgents
+                activeAgents.delete(agentId)
+                set({ activeAgents: activeAgents })
+                set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "activate" } }))
+                toast.success("Agent is now initialized..")
+            } else {
+                toast.warning("response is empty during deactivating agents")
+            }
+        } catch (error) {
+            console.error('Error deactivating agent:', error);
+            toast.error("May be server is not running...")
+        }
+    },
+
+    // HTTP Action: Fetch all agent statuses
+    loadAgents: async () => {
+        try {
+            const response = await axiosInstance.get('/api/agents/list');
+            if(response.data){
+                set({ agentStatus: response.data || {} });
+                toast.success("Agents loaded sucessfully!")
+            }else{
+                toast.warning("Response is empty during agent loads")
+            }
+        } catch (error) {
+            console.error('Error loading agents:', error);
+            toast.error("May be server is not running...")
+        }
+    },
+
+    
+
+    // HTTP Action: Upload a frame for inference processing
+    processFrame: async (frame, cameraId) => {
+        set({ isProcessing: true });
+        try {
+            const response = await axiosInstance.post('/api/process-frame', { frame, cameraId });
+            const result = response.data;
+
+            set((state) => ({
+                results: [
+                    {
+                        id: Date.now(),
+                        timestamp: new Date().toISOString(),
+                        cameraId,
+                        result
+                    },
+                    ...state.results
+                ].slice(0, 100) // Keep the latest 100 entries
+            }));
+
+            return result;
+        } catch (error) {
+            console.error('Error processing frame:', error);
+            return null;
+        } finally {
+            set({ isProcessing: false });
+        }
+    },
+
+    // Continuous Frame Processing Controls
+    startContinuousProcessing: (captureFrame, cameraId, intervalMs) => {
+        // Clear any pre-existing timer loops
+        if (continuousIntervalId) {
+            clearInterval(continuousIntervalId);
+        }
+
+        set({ isContinuousRunning: true });
+
+        continuousIntervalId = setInterval(async () => {
+            const frame = captureFrame();
+            if (frame) {
+                await get().processFrame(frame, cameraId);
+            }
+        }, intervalMs);
+    },
+
+    stopContinuousProcessing: () => {
+        if (continuousIntervalId) {
+            clearInterval(continuousIntervalId);
+            continuousIntervalId = null;
+        }
+        set({ isContinuousRunning: false });
+    },
+
+    // HTTP Action: Retrieve historic analytical logs for a camera
+    getResults: async (cameraId) => {
+        try {
+            const response = await axiosInstance.get(`/api/results/${cameraId}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error getting results:', error);
+            return [];
+        }
+    }
+
+}))

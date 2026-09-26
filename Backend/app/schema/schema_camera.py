@@ -20,7 +20,6 @@ class CameraSchema(BaseModel):
     password: Optional[str] = None
     protocol: str = "rtsp"
     model: Optional[str] = None
-    agent: Optional[str]
     status: CameraStatusSchema = CameraStatusSchema.OFFLINE
     stream_url: Optional[str] = None
     last_connected: Optional[datetime] = None

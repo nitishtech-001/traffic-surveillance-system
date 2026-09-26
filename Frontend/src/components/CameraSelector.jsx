@@ -22,7 +22,6 @@ export default function CameraSelector() {
         username: '',
         password: '',
         protocol: "http",
-        agent: ""
     });
 
     useEffect(() => {
@@ -52,7 +51,6 @@ export default function CameraSelector() {
                 port: 8080,
                 username: '',
                 password: '',
-                agent: '',
                 protocol: ''
             });
         } catch (error) {
@@ -194,21 +192,6 @@ export default function CameraSelector() {
                                 <option value="http">HTTP</option>
                                 <option value="rtsp">RTSP</option>
                             </select>
-
-                            <select
-                                id='agent'
-                                value={newCamera.agent}
-                                onChange={handleChange}
-                                className={`col-span-2 ${input_custom_style}`}
-                            >
-                                <option value="" >Select Agent To Run On Camera</option>
-                                <option value="object-detection">Agent: Object Detection</option>
-                                <option value="face-detection">Agent: Face Detection</option>
-                                <option value="licenseplate-detection">Agent: License Plate</option>
-                                <option value="motion-detection">Agent: Motion Tracking</option>
-                                <option value="text-detection">Agent: Text Recognition</option>
-                            </select>
-
 
                             <div className="mt-5 col-span-2 flex justify-end gap-3">
                                 <button

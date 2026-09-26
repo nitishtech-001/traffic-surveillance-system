@@ -2,8 +2,10 @@
 import numpy as np
 from ultralytics import YOLO
 import logging
-import os
-import torch
+# importing all agents
+from app.agents.object_detection import ObjectDetection
+from app.agents.agent_license_plate import LicensePlateAgent
+from app.agents.agent_object_detection import ObjectDetectionAgent
 
 logger = logging.getLogger(__name__)
 
@@ -12,64 +14,45 @@ class TrafficModel:
     Loads the 10-class YOLO model once and runs inference on BGR frames.
     Returns an annotated BGR frame of the same shape.
     """
+    
+    agents = {
+        "object-detection" : {"class":ObjectDetection ,"camera_id": [], "count": 0, "conf": 0.5, "device": "cuda" },
+        "licence-plate" : {"class":LicensePlateAgent,"camera_id": [], "count": 0, "conf": 0.5, "device": "cuda" },
+    }
+    active_agents = {}
 
-    def __init__(self, agent_file_name: str,agent_name: str,
-                 device: str = "cuda"):
+    @classmethod
+    def initalize(cls, agent_name: str,camera_id:str,device: str = "cuda"):
+        if agent_name in cls.agents:
+            cls.active_agents[agent_name] = cls.agents[agent_name]['class']()
+            cls.agents[agent_name]["camera_id"].append(camera_id)
+            
 
-        if torch.cuda.is_available():
-            print("MODEL IS RUNNING ON THE GPU FEEL FREE")
-        else:
-            print("MODEL IS RUNNING ON CPU MINIMIZE THE LOAD")
-
-        agent_path = os.getcwd()+f"/ai_models/{agent_file_name}"
-        if os.path.exists(agent_path) and agent_name != "":
-            logger.info(f"Agent path is valid {agent_path}")
-            try:
-                self.agent = YOLO(agent_path,task='detect')
-                self.agent.to(device)      
-                self.device = device
-                self.agent_name = agent_name
-                logger.info(f"Agent initalized... {agent_path}")
-            except Exception as e:
-                print("Agent Initalization Error ", e)
-        elif agent_file_name == "" and agent_name == "":
-            self.agent = None
-            self.device = None
-            self.agent_name = None
-            logger.info(f"Agent path is invalid {agent_path}")
+    @classmethod
+    def predict(cls,agent_name: str,bgr_frame: np.ndarray,conf:float = 0.35) -> np.ndarray:
+        if agent_name == "object-detection":
+           return cls.predict_object(bgr_frame,conf)
         
-    def predict(self,bgr_frame: np.ndarray,conf:float = 0.35) -> np.ndarray:
-        if self.agent_name == "object-detection":
-           return self.predict_object(bgr_frame,conf)
+        elif cls.agent_name == "face-detection":
+            return cls.predict_face(bgr_frame)
         
-        elif self.agent_name == "face-detection":
-            return self.predict_face(bgr_frame)
+        elif cls.agent_name == "licenseplate-detection":
+           return cls.predict_licenseplate(bgr_frame)
         
-        elif self.agent_name == "licenseplate-detection":
-           return self.predict_licenseplate(bgr_frame)
+        elif cls.agent_name == "motion-detection":
+            return cls.predict_motion(bgr_frame)
         
-        elif self.agent_name == "motion-detection":
-            return self.predict_motion(bgr_frame)
-        
-        elif self.agent_name == "text-detection":
-            return self.predict_text(bgr_frame)
+        elif cls.agent_name == "text-detection":
+            return cls.predict_text(bgr_frame)
         else:
             return bgr_frame
 
-    def predict_object(self, bgr_frame: np.ndarray,conf) -> np.ndarray:
+    def predict_object(cls, bgr_frame: np.ndarray,conf) -> np.ndarray:
         """
         Run detection + plot the boxes on the frame.
         Ultralytics .plot() returns a BGR numpy array when the input is BGR.
         """
-        results = self.agent.predict(
-            source=bgr_frame,
-            conf=conf,
-            device=self.device,
-            verbose=False,
-        )
-        # results[0].plot() draws boxes and returns the same shape
-        annotated = results[0].plot()
-        return annotated
+        
     
     def predict_face(self, bgr_frame: np.ndarray) -> np.ndarray:
         """

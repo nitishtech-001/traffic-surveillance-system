@@ -1,6 +1,6 @@
 # backend/app/agents/base_agent.py
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import  Dict, Any
 import numpy as np
 import logging
 from datetime import datetime
@@ -26,28 +26,28 @@ class BaseAgent(ABC):
         }
         
     @abstractmethod
-    async def initialize(self) -> bool:
+    def initialize(self) -> bool:
         """Initialize the agent and load models"""
         pass
     
     @abstractmethod
-    async def process(self, frame: np.ndarray) -> Dict[str, Any]:
+    def process(self, frame: np.ndarray,conf) -> Dict[str, Any]:
         """Process a single frame and return results"""
         pass
     
     @abstractmethod
-    async def cleanup(self) -> bool:
+    def cleanup(self) -> bool:
         """Cleanup resources"""
         pass
     
-    async def process_with_metrics(self, frame: np.ndarray) -> Dict[str, Any]:
+    def process_with_metrics(self, frame: np.ndarray, conf) -> Dict[str, Any]:
         """
         Process frame with performance tracking
         """
         start_time = datetime.now()
         
         try:
-            result = await self.process(frame)
+            result = self.process(frame,conf)
             
             # Update metrics
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -59,13 +59,14 @@ class BaseAgent(ABC):
                 self.performance_metrics["total_processed"]
             )
             
-            return {
-                "success": True,
-                "data": result,
-                "processing_time": processing_time,
-                "agent_id": self.id,
-                "agent_name": self.name
-            }
+            # return {
+            #     "success": True,
+            #     "data": result,
+            #     "processing_time": processing_time,
+            #     "agent_id": self.id,
+            #     "agent_name": self.name
+            # }
+            return result
             
         except Exception as e:
             logger.error(f"Agent {self.id} processing error: {str(e)}")

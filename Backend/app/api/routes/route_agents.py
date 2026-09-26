@@ -6,7 +6,7 @@ import logging
 from app.services.agent_orchestrator import AgentOrchestrator
 from app.schema.schema_agent import AgentTypeSchema
 from app.api.dependencies.authenticate import get_current_user
-
+from app.services.camera_manager import CameraManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,9 @@ agent_orchestrator = AgentOrchestrator()
 authenticate_user = {}
 
 @router.get("/list", response_model=List[Dict[str, Any]])
-async def list_agents(current_user: Dict = authenticate_user ):
+async def list_agents(
+    # current_user: Dict = authenticate_user 
+):
     """List all agents with their status"""
     try:
         status = await agent_orchestrator.get_agent_status()
@@ -30,17 +32,19 @@ async def list_agents(current_user: Dict = authenticate_user ):
 @router.post("/{agent_id}/activate")
 async def activate_agent(
     agent_id: str,
-    current_user: Dict = Depends(get_current_user)
+    # current_user: Dict = Depends(get_current_user)
 ):
     """Activate an agent"""
     try:
+        # if camera_id not in CameraManager.active_cameras:
+        #     raise HTTPException(status_code=404,detail="Camera is not connected")
+        
         success = await agent_orchestrator.activate_agent(agent_id)
         if not success:
             raise HTTPException(status_code=404, detail="Agent not found")
         
         return {
-            "message": f"Agent {agent_id} activated successfully",
-            "agent_id": agent_id
+            "message": f"Agent {agent_id} activated successfully"
         }
     except Exception as e:
         logger.error(f"Error activating agent: {str(e)}")
@@ -49,7 +53,7 @@ async def activate_agent(
 @router.post("/{agent_id}/deactivate")
 async def deactivate_agent(
     agent_id: str,
-    current_user: Dict = Depends(get_current_user)
+    # current_user: Dict = Depends(get_current_user)
 ):
     """Deactivate an agent"""
     try:
@@ -59,7 +63,6 @@ async def deactivate_agent(
         
         return {
             "message": f"Agent {agent_id} deactivated successfully",
-            "agent_id": agent_id
         }
     except Exception as e:
         logger.error(f"Error deactivating agent: {str(e)}")
@@ -69,7 +72,7 @@ async def deactivate_agent(
 async def add_agent(
     agent_type: str,
     config: Dict[str, Any] = None,
-    current_user: Dict = Depends(get_current_user)
+    # current_user: Dict = Depends(get_current_user)
 ):
     """Add a new agent to the system"""
     try:
@@ -85,7 +88,6 @@ async def add_agent(
         
         return {
             "message": f"Agent {agent_type} added successfully",
-            "agent_id": agent_type
         }
     except Exception as e:
         logger.error(f"Error adding agent: {str(e)}")
@@ -94,21 +96,23 @@ async def add_agent(
 @router.get("/{agent_id}/performance")
 async def get_agent_performance(
     agent_id: str,
-    current_user: Dict = Depends(get_current_user)
+    # current_user: Dict = Depends(get_current_user)
 ):
     """Get performance metrics for an agent"""
     try:
         performance = await agent_orchestrator.get_agent_performance(agent_id)
         if not performance:
             raise HTTPException(status_code=404, detail="Agent not found")
-        
+         
         return performance
     except Exception as e:
         logger.error(f"Error getting agent performance: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/stats")
-async def get_orchestrator_stats(current_user: Dict = Depends(get_current_user)):
+async def get_orchestrator_stats(
+    # current_user: Dict = Depends(get_current_user)
+):
     """Get orchestrator statistics"""
     try:
         stats = await agent_orchestrator.get_system_stats()

@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 logging.getLogger("aioice").setLevel(logging.WARNING)
 logging.getLogger("aiortc").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
-
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
+logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
 # Initialize global services
 camera_manager = CameraManager()
 stream_manager = StreamManager()
@@ -43,6 +45,8 @@ agent_orchestrator = AgentOrchestrator()
 async def lifespan(app: FastAPI):
     """Lifespan manager for startup and shutdown events"""
     # Startup
+    camera_manager.initialize()
+    stream_manager.initialize()
     logger.info("Starting Video Analysis System...")
     await agent_orchestrator.initialize()
 
@@ -55,7 +59,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
     await camera_manager.disconnect_all()
     await stream_manager.stop_all_streams()
-    # await agent_orchestrator.cleanup_all()
+    await agent_orchestrator.cleanup_all()
 
 # Create FastAPI app
 app = FastAPI(
@@ -104,5 +108,6 @@ if __name__ == "__main__":
         "main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG
+        reload=settings.DEBUG,
+        reload_excludes=["uploads/*", "uploads/**/*"]
     )

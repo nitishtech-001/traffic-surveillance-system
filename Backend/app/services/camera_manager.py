@@ -28,7 +28,7 @@ class CameraManager:
     stop_events: Dict[str, Event] = {}
     camera_status: Dict[str, CameraStatusSchema] = {}
 
-    def __init__(self):
+    def initialize(self):
         logger.info("Camera Manager Initialize succesfully!")
 
     @classmethod
@@ -61,11 +61,11 @@ class CameraManager:
                 "interval": 100/1000,
                 "retry_count": 0, 
             }
-
+            loop = asyncio.get_running_loop()
             # Start camera thread
             cls.camera_threads[camera_id] = Thread(
                 target=cls._camera_worker,
-                args=(camera_id, camera_url,save_dir),
+                args=(loop,camera_id, camera_url,save_dir),
                 daemon=True
             )
             cls.camera_threads[camera_id].start()
@@ -136,7 +136,7 @@ class CameraManager:
 
     ## deamon service of camera handling the straming
     @classmethod
-    def _camera_worker(cls, camera_id: str, camera_url: str, save_dir="./uploads"):
+    def _camera_worker(cls, loop, camera_id: str, camera_url: str, save_dir="./uploads"):
         """
         Worker thread for continuous camera frame capture
         """
@@ -144,8 +144,9 @@ class CameraManager:
         video_writer = None
         retry_attempts = 0
         max_retries = settings.MAX_RETRIES
-        predict_interval = time.time()
-
+        last_prediction_time = time.time()
+        ERROR_LOG_INTERVAL = 5.0 # Default for 5 second
+        last_error_log_time = 0
         save_dir += f"/{camera_id}"
         try:
             os.makedirs(save_dir,exist_ok=True)
@@ -224,19 +225,25 @@ class CameraManager:
 
                 camera_info = cls.active_cameras[camera_id]
                 
-                if predict_interval+camera_info['interval'] <= time.time():
+                if time.time() - last_prediction_time >= camera_info['interval']:
+                    current_time = time.time()
                     try:
-                        result = agent_orchestrator.process_frame(frame,camera_info['conf'])
-                        if result is None:
+                        # because this method is running on different thread and calling the async method
+                        future = asyncio.run_coroutine_threadsafe(agent_orchestrator.process_frame(frame,camera_info['conf']),loop)
+                        results = future.result()
+                        if results is None:
+                            camera_info["results"] = {"annotated_frame": frame}
                             raise Exception("Agent is Not active")
                         annotated_frame_counter += 1
                         camera_info["annotated_frame_count"] = annotated_frame_counter
-                        camera_info["last_annotated_frame"] = result["annotated_frame"]
-                        predict_interval = time.time()
+                        camera_info["results"] = results
                     except Exception as e:
-                        camera_info["last_annotated_frame"] = frame
-                        logger.error(f"{camera_id} YOLO model failed")
-                        print(e)
+                        # 2. Check if enough time has passed since the last error log
+                        if current_time - last_error_log_time >= ERROR_LOG_INTERVAL:
+                            logger.error(f"{camera_id} YOLO model failed. Error: {e}")
+                            last_error_log_time = current_time
+                    finally:
+                        last_prediction_time = current_time
 
                 # Update camera info
                 camera_info["last_frame"] = frame
@@ -381,3 +388,12 @@ class CameraManager:
             logger.error(f"Error updating camera settings: {str(e)}")
             return False
 
+    @classmethod
+    async def update_conf_interval(cls, camera_id: str, conf: float, interval: float):
+        # getting camera info
+        camera_info = cls.active_cameras.get(camera_id,{})
+        if camera_info:
+            camera_info["conf"] = conf
+            camera_info["interval"] = interval
+            return True
+        return False

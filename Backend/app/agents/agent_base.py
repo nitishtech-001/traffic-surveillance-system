@@ -4,6 +4,7 @@ from typing import  Dict, Any
 import numpy as np
 import logging
 from datetime import datetime
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -59,14 +60,15 @@ class BaseAgent(ABC):
                 self.performance_metrics["total_processed"]
             )
             
-            # return {
-            #     "success": True,
-            #     "data": result,
-            #     "processing_time": processing_time,
-            #     "agent_id": self.id,
-            #     "agent_name": self.name
-            # }
-            return result
+            return {
+                "success": True,
+                "result": result,
+                "processing_time": processing_time,
+                "agent_id": self.id,
+                "agent_name": self.name,
+                "confidence": conf,
+                "performance_metrics": self.performance_metrics
+            }
             
         except Exception as e:
             logger.error(f"Agent {self.id} processing error: {str(e)}")

@@ -20,7 +20,7 @@ class StreamManager:
     active_streams: Dict[str, Dict[str, Any]] = {}
     stream_processes: Dict[str, subprocess.Popen] = {}
     
-    def __init__(self):
+    def initialize(self):
         logger.info("Stream Manager Initialize succesfully!")
    
     @classmethod

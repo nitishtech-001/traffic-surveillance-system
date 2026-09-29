@@ -16,7 +16,10 @@ async def stream_websocket(websocket: WebSocket, camera_id: str):
         await websocket.close(code=1008, reason="Camera not ready")
         return
 
-    video_track = WebRTCLiveTrack(camera_id=camera_id, active_cameras_dict=CameraManager.active_cameras)
+    # Data channel explicitly for each annotated_frame
+    data_channel = pc.createDataChannel("metadata_channel")
+
+    video_track = WebRTCLiveTrack(camera_id=camera_id, active_cameras_dict=CameraManager.active_cameras, data_channel=data_channel)
     pc.addTrack(video_track)
 
     @pc.on("connectionstatechange")

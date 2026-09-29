@@ -48,6 +48,7 @@ export const useAgents = create((set, get) => ({
                 const updatesAgents = new Set([...activeAgents,agentId])
                 set({activeAgents: updatesAgents})
                 set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "processing" } }))
+                set({isProcessing: true})
                 toast.success("Agent is now activated.")
                 toast.success("Agent is processing..")
             }else{
@@ -69,6 +70,7 @@ export const useAgents = create((set, get) => ({
                 activeAgents.delete(agentId)
                 set({ activeAgents: activeAgents })
                 set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "activate" } }))
+                set({isProcessing: false})
                 toast.success("Agent is now initialized..")
             } else {
                 toast.warning("response is empty during deactivating agents")

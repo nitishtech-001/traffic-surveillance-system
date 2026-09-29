@@ -40,6 +40,7 @@ export default function CameraLiveFeed() {
             videoRef.current.srcObject = streamObject;
         }
     }, [streamObject]);
+    console.log(streamObject)
  
     return (
         <div className="w-full max-w-4xl mx-auto rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 p-2 shadow-xl">

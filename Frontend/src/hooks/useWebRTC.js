@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { create } from 'zustand';
 
 const useWebRTC = create((set, get) => {
@@ -9,6 +10,7 @@ const useWebRTC = create((set, get) => {
     return {
         connectionStatus: "Disconnected",
         streamObject: null,
+        results: null,
 
         connectToLiveFeed: (wsUrl, cameraId) => {
             // 1. Clean up any existing connection first
@@ -32,6 +34,23 @@ const useWebRTC = create((set, get) => {
                     });
                 }
             };
+
+            // handling the incoming data
+            peerConnection.ondatachannel = (event)=>{
+                const channel = event.channel
+
+                if (channel.label == "metadata_channel"){
+                    channel.onmessage = (MessageEvent)=>{
+                        try{
+                            const dictionaryData = JSON.parse(MessageEvent.data)
+                            set({results: dictionaryData})
+
+                        }catch(err){
+                            console.error("failed to parse metadata JSON", err)
+                        }
+                    }
+                }
+            }
 
             // Forward local network candidates to the backend
             peerConnection.onicecandidate = (event) => {
@@ -100,6 +119,7 @@ const useWebRTC = create((set, get) => {
             }
             pendingCandidates = [];
             set({ connectionStatus: "Disconnected 🔴", streamObject: null });
+            set({results: null})
         }
     };
 });

@@ -45,7 +45,7 @@ class AgentOrchestrator:
             for agent_type, agent_class in cls.agent_registry.items():
                 await cls.add_agent(agent_type=agent_type, agent_class=agent_class)
         except Exception as e:
-            print("Error during the model initializaton :::",e)
+            logger.error(f"Error during the model initializaton ::: {e}")
 
 
     @classmethod
@@ -120,15 +120,15 @@ class AgentOrchestrator:
         return False
 
     @classmethod
-    def process_frame(cls, frame: np.ndarray, conf: float=0.5) -> Dict[str, Any]:
+    async def process_frame(cls,frame: np.ndarray, conf: float=0.5) -> Dict[str, Any]:
         """
         Process a single frame through all active agents
         """
         if not cls.active_agents:
             return None
         start_time = datetime.now()
-        results = {}
-        processing_times = {}
+        agent_ids = []
+        tasks = []
         annotated_frame = None
         # Process frame through each active agent
         for agent_id in cls.active_agents:
@@ -140,33 +140,50 @@ class AgentOrchestrator:
                 # Update status
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.PROCESSING
                 
-                # Process frame
-                agent_start = datetime.now()
-                result = agent.process_with_metrics(frame,conf)
-                agent_time = (datetime.now() - agent_start).total_seconds()
-                
-                # Store result
-                results[agent_id] = result
-                processing_times[agent_id] = agent_time
-                annotated_frame = result
+                task = asyncio.to_thread(agent.process_with_metrics,frame,conf)
+                tasks.append(task)
+                agent_ids.append(agent_id)
                 # Update status
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.READY
                 
             except Exception as e:
                 logger.error(f"Agent {agent_id} processing error: {str(e)}")
-                results[agent_id] = {"success": False, "error": str(e)}
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.ERROR
-        
+
+        results = {}
+        raw_results = await asyncio.gather(*tasks)
+
+        for agent_id, agent_result in zip(agent_ids, raw_results):
+            try:
+                if agent_id == "object-detection" and isinstance(agent_result,Dict) and "result" in agent_result :
+                    result_data = agent_result["result"]
+                    if isinstance(result_data, Dict) and "annotated_frame" in result_data:
+                        annotated_frame = result_data.pop("annotated_frame",None)
+                results[agent_id] = agent_result
+            except Exception as e:
+                logger.error(f"Error structuring result of {agent_id} ::: {e}")
+                cls.agent_metadata[agent_id]["status"] = AgentOrchestrator.ERROR
+
         total_time = (datetime.now() - start_time).total_seconds()
+
+
+        # response should be like {information_data, agent_name: there_result}
+        # add some extra informaion about the annotated frame
+        reponse = {}
+        reponse["success"] = True
+        reponse["timestamp"] = datetime.now().isoformat()
+        reponse["total_processing_time"] = total_time
+        reponse["active_agnets"] = cls.active_agents.copy()
+        reponse["agent_results"] = results
+
+        if "object-detection" not in agent_ids or annotated_frame is None:
+            annotated_frame = frame
         
+        cls.last_results = reponse
+
         return {
-            "timestamp": datetime.now().isoformat(),
-            "success": True,
-            "results": results,
+            "data": reponse,
             "annotated_frame": annotated_frame,
-            "processing_times": processing_times,
-            "total_processing_time": total_time,
-            "active_agents": cls.active_agents.copy()
         }
 
     @classmethod
@@ -216,7 +233,7 @@ class AgentOrchestrator:
         return None
 
     @classmethod
-    def cleanup_all(cls):
+    async def cleanup_all(cls):
         """
         Cleanup all agents and stop worker
         """

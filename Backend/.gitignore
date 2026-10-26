@@ -4,5 +4,7 @@ run.py
 uv.lock
 __pycache__/
 *.pyc
+which_rtsp_work.py
+pyproject.toml
 
 uploads/

@@ -1,0 +1,5 @@
+Document
+Dockerfile
+dockerfile.dev
+.vscode/*
+!.vscode/extensions.json

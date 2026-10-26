@@ -1,6 +1,4 @@
-# backend/app/services/camera_manager.py
 import logging
-from fastapi import HTTPException
 from typing import Dict, List, Any
 from datetime import datetime
 from threading import Thread, Event

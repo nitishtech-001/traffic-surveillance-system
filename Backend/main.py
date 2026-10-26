@@ -6,7 +6,7 @@ import logging
 from contextlib import asynccontextmanager
 
 # Routes
-from app.api.routes import route_agents, route_auth, route_camera, route_stream, route_websocket
+from app.api.routes import route_agents, route_camera, route_stream, route_websocket
 
 # Configuration
 from app.core.config import settings
@@ -17,8 +17,6 @@ from app.services.stream_manager import StreamManager
 from app.services.agent_orchestrator import AgentOrchestrator
 from app.services.camera_manager import CameraManager
 
-# Schema
-from app.schema.schema_agent import AgentTypeSchema
 
 # Setup logging
 logging.basicConfig(

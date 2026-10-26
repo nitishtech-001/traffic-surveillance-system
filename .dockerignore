@@ -1,4 +1,13 @@
-node_module/
-.venv/
-__pycahe__/
 Document/
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+.git
+.venv
+venv
+.env
+
+# temporary file removing
+Backend/uploads
+Backend/which_rtsp_work.py

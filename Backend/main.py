@@ -1,4 +1,3 @@
-# backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -47,7 +46,7 @@ async def lifespan(app: FastAPI):
     # Startup
     camera_manager.initialize()
     stream_manager.initialize()
-    logger.info("Starting Video Analysis System...")
+    logger.info("Starting Traffic Analysis System...")
     await agent_orchestrator.initialize()
 
     logger.info(f"Number of Register Agents are ::::  {len(agent_orchestrator.agent_registry)} .")

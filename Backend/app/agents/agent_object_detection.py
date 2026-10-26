@@ -2,7 +2,6 @@
 import cv2
 import numpy as np
 from typing import Dict, Any, List
-import torch
 from pathlib import Path
 import logging
 from app.agents.agent_base import BaseAgent
@@ -24,7 +23,7 @@ class ObjectDetectionAgent(BaseAgent):
         )
         self.model = None
         self.class_names = []
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         
     async def initialize(self) -> bool:
         """
@@ -126,8 +125,6 @@ class ObjectDetectionAgent(BaseAgent):
         try:
             if self.model:
                 del self.model
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
             self.is_initialized = False
             return True
         except Exception as e:

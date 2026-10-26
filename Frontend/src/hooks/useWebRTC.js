@@ -20,7 +20,7 @@ const useWebRTC = create((set, get) => {
             pendingCandidates = [];
 
             socket = new WebSocket(wsUrl);
-            peerConnection = new RTCPeerConnection({
+        peerConnection = new RTCPeerConnection({
                 // iceServers: [{ urls: "stun:://google.com" }]
                 iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
             });

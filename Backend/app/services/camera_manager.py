@@ -294,7 +294,6 @@ class CameraManager:
             "id": camera_id,
             "name": camera_info["camera"].name,
             "status": cls.camera_status.get(camera_id, CameraStatusSchema.OFFLINE),
-            # "buffer_size": cls.frame_buffers.get(camera_id, queue.Queue()).qsize(),
             "connected": camera_info["connected"],
             "fps": camera_info["fps"],
             "frame_count": camera_info["frame_count"],

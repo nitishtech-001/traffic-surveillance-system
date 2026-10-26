@@ -21,7 +21,7 @@ export default function CameraSelector() {
         port: 8080,
         username: '',
         password: '',
-        protocol: "http",
+        protocol: '',
     });
 
     useEffect(() => {
@@ -189,6 +189,7 @@ export default function CameraSelector() {
                                 onChange={handleChange}
                                 className={input_custom_style}
                             >
+                                <option value="">Protocol</option>
                                 <option value="http">HTTP</option>
                                 <option value="rtsp">RTSP</option>
                             </select>

@@ -16,7 +16,6 @@ dependencies = [
     "pyjwt==2.13.0",
     "python-dotenv==1.0.1",
     "python-multipart==0.0.9",
-    "torch==2.13.0",
     "ultralytics==8.4.124",
     "uvicorn[standard]==0.30.1",
     "websockets==12.0",

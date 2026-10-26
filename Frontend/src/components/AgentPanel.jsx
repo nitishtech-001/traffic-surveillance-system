@@ -1,5 +1,4 @@
-import React, { use, useEffect, useState } from 'react';
-import { FaCheck, FaSpinner } from 'react-icons/fa';
+import {  FaSpinner } from 'react-icons/fa';
 import { useAgents } from '../hooks/useAgents';
 import { useCamera } from "../hooks/useCamera.js"
 import { toast } from 'react-toastify';
@@ -7,50 +6,22 @@ import { toast } from 'react-toastify';
 export default function AgentPanel() {
   const currentCamera = useCamera((s) => s.currentCamera)
   const availableAgents = useAgents((s) => s.availableAgents)
-  const addedAgents = useAgents((s) => s.addedAgents)
   const activeAgents = useAgents((s) => s.activeAgents)
-  const addAgent = useAgents((s) => s.addAgent)
   const activateAgent = useAgents((s)=>s.activateAgent)
   const deactivateAgnet = useAgents((s) => s.deactivateAgent)
   const agentStatus = useAgents((s)=>s.agentStatus)
 
 
-  // const toggleContinuousProcessing = () => {
-  //   if (processingMode === 'single') {
-  //     if (!selectedCamera || !isConnected) {
-  //       toast.warning('Please connect to a camera first');
-  //       return;
-  //     }
+  console.log(agentStatus)
 
-  //     startContinuousProcessing(
-  //       captureFrame,
-  //       selectedCamera,
-  //       selectedAgents,
-  //       settings.processingInterval
-  //     );
-  //     setProcessingMode('continuous');
-  //     toast.info('Continuous processing started');
-  //   } else {
-  //     stopContinuousProcessing();
-  //     setProcessingMode('single');
-  //     toast.info('Continuous processing stopped');
-  //   }
-  // };
-
-  const handleSelectAllAgents = () => {
-    let updatedAgents = []
-    for (const agent of availableAgents) {
-      updatedAgents.push(agent.id)
+  const activateDeactiveAll = async()=>{
+    for( const agent of availableAgents){
+      await handleActivateDeactivate(agent.id)
     }
-    setSelectedAgents(updatedAgents)
-  }
-
-  const handleDeselectAllAgents = () => {
-    setSelectedAgents([])
   }
 
   const handleActivateDeactivate = async (agentId)=> {
-    if(!currentCamera){
+    if(!currentCamera || !activeAgents){
       toast.warning("Select the camers first..")
       return 
     }
@@ -91,7 +62,7 @@ export default function AgentPanel() {
                   {agent.name}
                 </span>
 
-                <button className={`flex w-22 h-8 items-center justify-center rounded-lg bg-sky-600 text-xs text-white ${agentStatus[agent.id] === "active"?"bg-green-500":"bg-blue-200"} cursor-pointer`}
+                <button className={`flex w-22 h-8 items-center justify-center rounded-lg text-xs text-white ${agentStatus[agent.id] === "processing"?"bg-green-500":"bg-sky-500"} cursor-pointer`}
                   onClick={() => handleActivateDeactivate(agent.id)}
                 >
                   {agentStatus[agent.id] || "activate"}
@@ -126,14 +97,14 @@ export default function AgentPanel() {
         <button
           type="button"
           className="flex-1 rounded-xl bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600"
-          onClick={handleSelectAllAgents}
+          onClick={activateDeactiveAll}
         >
           Activate All
         </button>
         <button
           type="button"
           className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-          onClick={handleDeselectAllAgents}
+          onClick={activateDeactiveAll}
         >
           Clear All
         </button>

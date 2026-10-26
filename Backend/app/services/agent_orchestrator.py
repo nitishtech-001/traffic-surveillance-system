@@ -24,7 +24,7 @@ class AgentOrchestrator:
     # AgentSchema registry - maps agent types to their classes
     agent_registry = {
         AgentTypeSchema.OBJECT_DETECTION: ObjectDetectionAgent,
-        # AgentTypeSchema.LICENSE_PLATE: LicensePlateAgent,
+        AgentTypeSchema.LICENSE_PLATE: LicensePlateAgent,
         # Add more agents here as you create them
         # AgentTypeSchema.FACE_DETECTION: FaceDetectionAgent,
         # AgentTypeSchema.MOTION_TRACKING: MotionTrackingAgent,

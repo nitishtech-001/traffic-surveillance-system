@@ -5,7 +5,7 @@ import os
 load_dotenv()
 class Settings:
     # Application
-    APP_NAME: str = "Video Analysis System"
+    APP_NAME: str = "Traffic Analysis System"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
     SECRET_KEY: str = "nitish@"
@@ -28,6 +28,7 @@ class Settings:
     # AI Models
     AGENT_MODEL_PATH: str = os.path.join(os.getcwd()+"/ai_models")
     AGENT_MODEL_OBJECT_DETECTION: str = "object_detection.pt"
+    AGENT_LICENSE_PLATE: str = "license_plate.pt"
     # add other agent_model_names
     CONFIDENCE_THRESHOLD: float = 0.5
     

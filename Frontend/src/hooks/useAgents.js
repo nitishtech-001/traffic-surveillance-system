@@ -9,7 +9,7 @@ export const useAgents = create((set, get) => ({
     availableAgents: [
         { id: 'object-detection', name: 'Object Detection', icon: '🔍' },
         // { id: 'face-detection', name: 'Face Detection', icon: '👤' },
-        // { id: 'license-plate', name: 'License Plate', icon: '🚗' },
+        { id: 'license-plate', name: 'License Plate', icon: '🚗' },
         // { id: 'motion-tracking', name: 'Motion Tracking', icon: '🏞️' },
         // { id: 'text-recognition', name: 'Text Recognition', icon: '📝' }
     ],
@@ -45,10 +45,12 @@ export const useAgents = create((set, get) => ({
             if(response.data){
                 toast.success(response.data.message)
                 const activeAgents = get().activeAgents
-                const updatesAgents = new Set([...activeAgents,agentId])
-                set({activeAgents: updatesAgents})
-                set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "processing" } }))
-                set({isProcessing: true})
+                const updateAgents = new Set([...activeAgents,agentId])
+                set((s) => ({
+                    activeAgents: updateAgents,
+                    agentStatus: { ...s.agentStatus, [agentId]: "processing" },
+                    isProcessing: true
+                }))
                 toast.success("Agent is now activated.")
                 toast.success("Agent is processing..")
             }else{
@@ -67,10 +69,13 @@ export const useAgents = create((set, get) => ({
             if (response.data) {
                 toast.success(response.data.message)
                 const activeAgents = get().activeAgents
-                activeAgents.delete(agentId)
-                set({ activeAgents: activeAgents })
-                set((s) => ({ agentStatus: { ...s.agentStatus, [agentId]: "activate" } }))
-                set({isProcessing: false})
+                const updateAgents = new Set(activeAgents)
+                updateAgents.delete(agentId)
+                set((s)=>({
+                    activeAgents: updateAgents,
+                    agentStatus: {...s.agentStatus, [agentId]: "activate"},
+                    isProcessing: false
+                }))
                 toast.success("Agent is now initialized..")
             } else {
                 toast.warning("response is empty during deactivating agents")
@@ -94,36 +99,6 @@ export const useAgents = create((set, get) => ({
         } catch (error) {
             console.error('Error loading agents:', error);
             toast.error("May be server is not running...")
-        }
-    },
-
-    
-
-    // HTTP Action: Upload a frame for inference processing
-    processFrame: async (frame, cameraId) => {
-        set({ isProcessing: true });
-        try {
-            const response = await axiosInstance.post('/api/process-frame', { frame, cameraId });
-            const result = response.data;
-
-            set((state) => ({
-                results: [
-                    {
-                        id: Date.now(),
-                        timestamp: new Date().toISOString(),
-                        cameraId,
-                        result
-                    },
-                    ...state.results
-                ].slice(0, 100) // Keep the latest 100 entries
-            }));
-
-            return result;
-        } catch (error) {
-            console.error('Error processing frame:', error);
-            return null;
-        } finally {
-            set({ isProcessing: false });
         }
     },
 

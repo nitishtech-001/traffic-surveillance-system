@@ -66,8 +66,11 @@ class BaseAgent(ABC):
                 "processing_time": processing_time,
                 "agent_id": self.id,
                 "agent_name": self.name,
-                "confidence": conf,
-                "performance_metrics": self.performance_metrics
+                "confidence_threshold": conf,
+                "performance_metrics": {
+                    **self.performance_metrics,
+                    "last_processing_seconds": self.performance_metrics["last_processing_time"]
+                }
             }
             
         except Exception as e:

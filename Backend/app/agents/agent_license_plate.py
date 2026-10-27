@@ -9,7 +9,6 @@ import os
 
 from app.core.config import settings
 from app.agents.agent_base import BaseAgent
-from app.schema.schema_detection import LicensePlateDetectionSchema, BoundingBoxSchema
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ class LicensePlateAgent(BaseAgent):
         )
         self.reader = None
         self.detection_model = None
+        self._normalize = lambda s: re.sub(r'[^A-Z0-9]', '', s.upper())
         
     async def initialize(self) -> bool:
         """
@@ -90,8 +90,6 @@ class LicensePlateAgent(BaseAgent):
 
                         for detection in ocr_result:
                             raw_text = detection[1]
-                            print("TYPE OF DETECTION ::: ",type(detection))
-                            print("DETECTION RESULT ::: ", detection)
 
                             ocr_conf = detection[2]
 
@@ -103,9 +101,10 @@ class LicensePlateAgent(BaseAgent):
 
                         if combined_text:
                             final_ocr_conf = sum(ocr_confidences)/len(ocr_confidences)
-
+                            final_text = self._normalize(combined_text)
+                            final_text = final_text[0:10] if len(final_text) > 10 else final_text
                             plate = {
-                                "plate_text": combined_text.upper(),
+                                "plate_text": final_text,
                                 "confidence": final_ocr_conf
                             }
 

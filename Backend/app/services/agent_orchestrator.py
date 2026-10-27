@@ -121,8 +121,7 @@ class AgentOrchestrator:
         if not cls.active_agents:
             return None
         start_time = datetime.now()
-        agent_ids = []
-        tasks = []
+        agent_ids, tasks = [], []
         annotated_frame = None
         # Process frame through each active agent
         for agent_id in cls.active_agents:
@@ -134,8 +133,8 @@ class AgentOrchestrator:
                 # Update status
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.PROCESSING
                 
-                task = asyncio.to_thread(agent.process_with_metrics,frame,conf)
-                tasks.append(task)
+                tasks.append(asyncio.to_thread(agent.process_with_metrics,frame,conf))
+
                 agent_ids.append(agent_id)
                 # Update status
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.READY
@@ -144,39 +143,46 @@ class AgentOrchestrator:
                 logger.error(f"Agent {agent_id} processing error: {str(e)}")
                 cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.ERROR
 
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
         results = {}
-        raw_results = await asyncio.gather(*tasks)
 
         for agent_id, agent_result in zip(agent_ids, raw_results):
-            try:
-                if agent_id == "object-detection" and isinstance(agent_result,Dict) and "result" in agent_result :
-                    result_data = agent_result["result"]
-                    if isinstance(result_data, Dict) and "annotated_frame" in result_data:
-                        annotated_frame = result_data.pop("annotated_frame",None)
-                results[agent_id] = agent_result
-            except Exception as e:
-                logger.error(f"Error structuring result of {agent_id} ::: {e}")
-                cls.agent_metadata[agent_id]["status"] = AgentOrchestrator.ERROR
+            if isinstance(agent_result, Exception):
+                logger.error(f"Agent {agent_id} raised: {agent_result}")
+                cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.ERROR
+                results[agent_id] = {
+                    "success": False,
+                    "error": str(agent_result),
+                    "agent_id": agent_id,
+                }
+                continue
+
+            result = agent_result.get("result") or {}
+            if isinstance(result, dict) and "annotated_frame" in result:
+                annotated_frame = result["annotated_frame"]
+                agent_result["result"] = {k: v for k, v in result.items() if k != "annotated_frame"}
+
+            results[agent_id] = agent_result
+            cls.agent_metadata[agent_id]["status"] = AgentStatusSchema.READY
 
         total_time = (datetime.now() - start_time).total_seconds()
 
 
-        # response should be like {information_data, agent_name: there_result}
-        # add some extra informaion about the annotated frame
-        reponse = {}
-        reponse["success"] = True
-        reponse["timestamp"] = datetime.now().isoformat()
-        reponse["total_processing_time"] = total_time
-        reponse["active_agnets"] = cls.active_agents.copy()
-        reponse["agent_results"] = results
+        response = {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "total_processing_time": total_time,
+            "active_agents": list(cls.active_agents),   
+            "agent_results": results,
+        }
 
         if "object-detection" not in agent_ids or annotated_frame is None:
             annotated_frame = frame
         
-        cls.last_results = reponse
+        cls.last_results = response
 
         return {
-            "data": reponse,
+            "data": response,
             "annotated_frame": annotated_frame,
         }
 

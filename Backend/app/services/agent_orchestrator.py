@@ -1,7 +1,7 @@
 # backend/app/services/agent_orchestrator.py
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Type
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 import numpy as np
 
@@ -25,7 +25,7 @@ class AgentOrchestrator:
     agent_registry = {
         AgentTypeSchema.OBJECT_DETECTION: ObjectDetectionAgent,
         AgentTypeSchema.LICENSE_PLATE: LicensePlateAgent,
-        # Add more agents here as you create them
+        # Add more agents 
         # AgentTypeSchema.FACE_DETECTION: FaceDetectionAgent,
         # AgentTypeSchema.MOTION_TRACKING: MotionTrackingAgent,
     }
@@ -49,17 +49,11 @@ class AgentOrchestrator:
 
 
     @classmethod
-    # async def add_agent(cls, agent_type: AgentTypeSchema, config: Dict[str, Any] = None) -> bool:
     async def add_agent(cls,agent_type: AgentTypeSchema, agent_class,config:Dict[str,Any]=None)->bool:
         """
         Add and initialize a new agent
         """
         try:
-            # agent_class = cls.agent_registry.get(agent_type)
-            # if not agent_class:
-            #     logger.error(f"Agent type {agent_type} not registered")
-            #     return False
-            
             # Create agent instance
             agent_id = agent_type.value
             agent = agent_class(agent_id=agent_id, config=config or {})

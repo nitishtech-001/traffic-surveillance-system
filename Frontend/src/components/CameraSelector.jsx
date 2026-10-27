@@ -14,14 +14,14 @@ export default function CameraSelector() {
 
     const [addCameraPopup, setAddCameraPopup] = useState(false);
     const [newCamera, setNewCamera] = useState({
-        id: '',
-        name: '',
-        model: '',
-        ip_address: '',
+        id: 'caml',
+        name: 'main gate',
+        model: 'ipwebcam',
+        ip_address: '192.168.29.2',
         port: 8080,
-        username: '',
-        password: '',
-        protocol: '',
+        username: 'nk',
+        password: 'nk001',
+        protocol: 'http',
     });
 
     useEffect(() => {
@@ -188,6 +188,7 @@ export default function CameraSelector() {
                                 value={newCamera.protocol}
                                 onChange={handleChange}
                                 className={input_custom_style}
+                                required
                             >
                                 <option value="">Protocol</option>
                                 <option value="http">HTTP</option>

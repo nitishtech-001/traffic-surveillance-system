@@ -11,7 +11,6 @@ export const useAgents = create((set, get) => ({
         // { id: 'face-detection', name: 'Face Detection', icon: '👤' },
         { id: 'license-plate', name: 'License Plate', icon: '🚗' },
         // { id: 'motion-tracking', name: 'Motion Tracking', icon: '🏞️' },
-        // { id: 'text-recognition', name: 'Text Recognition', icon: '📝' }
     ],
     // addedAgents: [],
     activeAgents: new Set(),
@@ -19,24 +18,6 @@ export const useAgents = create((set, get) => ({
     results: [],
     isProcessing: false,
     isContinuousRunning: false,
-
-    // TODO : I am doping the add status, i already initilized all model in backend because it take less or minimal memory use ..
-    // addAgent : async (agentId,config)=>{
-    //     try{
-    //         const response = await axiosInstance.post(`/api/agents/add/${agentId}`,config)
-    //         if(response.data){
-    //             toast.success(response.data.message)
-    //             set((s)=>({addedAgents: [...s.addedAgents, agentId]}))
-    //             set((s)=>({agentStatus: {...s.agentStatus, [agentId]:"active"}}))
-    //             toast.success("Agent added succesfully!")
-    //         }else{
-    //             toast.warning("Response is emtpy while adding agent!!")
-    //         }
-    //     }catch(error){
-    //         toast.error("Agent added error...")
-    //         console.log(error)
-    //     }
-    // },
 
     // HTTP Action: Activate specific agent
     activateAgent: async (agentId) => {
@@ -100,7 +81,7 @@ export const useAgents = create((set, get) => ({
             console.error('Error loading agents:', error);
             toast.error("May be server is not running...")
         }
-    },
+    }, 
 
     // Continuous Frame Processing Controls
     startContinuousProcessing: (captureFrame, cameraId, intervalMs) => {

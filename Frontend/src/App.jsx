@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 // Components import
 import CameraLiveFeed from './components/CameraLiveFeed.jsx';
 import AgentPanel from './components/AgentPanel.jsx';
 import AnalysisResults from './components/AnalysisResult.jsx';
-import VideoControls from './components/VideoControls.jsx';
+
 import ProcessingSettings from './components/ProcessingSettings.jsx';
 import Header from './components/Header.jsx';
 
-// Hooks import
-import { useCameraStream } from './hooks/useCameraStream.js';
-
-import { useAgents } from './hooks/useAgents.js';
 import { useTheme } from './hooks/useTheme.js';
 
 
@@ -32,9 +27,6 @@ export default function App() {
             <div className="space-y-5">
               <section className="rounded-[28px] border border-slate-200/80 bg-white/80 p-3  dark:border-slate-800 dark:bg-slate-900/80 sm:p-4">
                 <CameraLiveFeed />
-
-                  <VideoControls/>
-             
               </section>
 
               <section className="rounded-[28px] border border-slate-200/80 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/80 sm:p-5">

@@ -113,7 +113,7 @@ export default function AnalysisResults() {
                         {agentResult.total_objects || 0} objects
                       </span>
                     </div>
-                    <div className="mt-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin space-y-1.5 ">
+                    <div className="mt-2 h-15 overflow-y-auto pr-1 scrollbar-thin space-y-1.5 ">
                       {Object.entries(agentResult?.object_counts).map(([class_name, class_count]) => 
                         (
                         <div key={class_name} className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
@@ -141,7 +141,7 @@ export default function AnalysisResults() {
                         {plates.length} plates
                       </span>
                     </div>
-                    <div className="mt-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin space-y-1.5">
+                    <div className="mt-2 h-15 overflow-y-auto pr-1 scrollbar-thin space-y-1.5">
                       {plates.map((plate, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-3 text-sm">
                           <span className="font-mono font-bold text-sky-800 dark:text-sky-200">{plate.plate_text}</span>

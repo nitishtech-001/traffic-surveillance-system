@@ -56,15 +56,3 @@ async def stop_stream(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/{camera_id}/update/{conf}/{interval}")
-async def update_stream(camera_id, conf:float, interval:float):
-    conf = conf/100
-    interval = interval/1000 # changing to milisecond
-    try:
-        success = await CameraManager.update_conf_interval(camera_id, conf, interval)
-        if success:
-            return {"message": f"Interval now : {interval*1000}ms and Conf now : {conf*100}%"}
-        else:
-            raise HTTPException(504, "Something went wrong.")
-    except Exception as e:
-        print(e)

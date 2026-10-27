@@ -98,12 +98,12 @@ async def disconnect_camera(
 async def update_camera_settings(
     camera_id: str,
     settings: Dict[str, Any] = Body(...),
-    # current_user: Dict = Depends(get_current_user)
 ):
     """
     Update camera settings
     """
     try:
+        print("INFROMATION FROM USER :::: ",settings)
         success = await camera_manager.update_camera_settings(camera_id, settings)
         if not success:
             raise HTTPException(status_code=404, detail="Camera not found")

@@ -3,10 +3,9 @@ import { axiosInstance } from '../services/axiosInstance.js';
 import { create } from 'zustand';
 
 const useCameraStream = create((set) => ({
-    processingInterval: 1000,
-    confidenceThreshold: 50,
-    realtimeAnalysis: false,
-    saveResult: false,
+    interval: 1000,
+    conf: 0.50,
+    record: false,
     streamUrl: null,
 
     startStream: async (cameraId) => {
@@ -40,18 +39,18 @@ const useCameraStream = create((set) => ({
         }
     },
 
-    updateConfInterval: async (cameraId, conf, interval) => {
+    updateConfiguration: async (cameraId, configuration) => {
         try {
-            const response = await axiosInstance.post(`/api/streams/${cameraId}/update/${conf}/${interval}`)
+            console.log(configuration)
+            const response = await axiosInstance.put(`/api/cameras/${cameraId}/update`, configuration)
             if (response.data) {
                 toast.success(response.data.message)
-                set({ processingInterval: interval })
-                set({ confidenceThreshold: conf })
+                set({ ...configuration })
             } else {
                 toast.error("response data is Empty Something wrong..")
             }
         } catch (error) {
-            toast.error("api error during conf and interval update")
+            toast.error("api error during camera configuration update")
             console.log(error)
         }
     },

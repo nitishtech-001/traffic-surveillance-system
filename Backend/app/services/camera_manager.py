@@ -50,13 +50,14 @@ class CameraManager:
             cls.active_cameras[camera_id] = {
                 "camera": camera,
                 "camera_url": camera_url,
+                "record": False,
                 "last_frame": None,
                 "last_update": None,
                 "fps": 0,
                 "frame_count": 0,
                 "connected": False,
                 "conf": 0.5,
-                "interval": 100/1000,
+                "interval": 1000, # interval in ms
                 "retry_count": 0, 
             }
             loop = asyncio.get_running_loop()
@@ -143,6 +144,7 @@ class CameraManager:
         retry_attempts = 0
         max_retries = settings.MAX_RETRIES
         last_prediction_time = time.time()
+        video_writer_path = None
         ERROR_LOG_INTERVAL = 5.0 # Default for 5 second
         last_error_log_time = 0
         save_dir += f"/{camera_id}"
@@ -155,6 +157,31 @@ class CameraManager:
         fps_frame_counter = 0
         annotated_frame_counter = 0
         
+        def _release_writer():
+            """Helper to close the current video writer safely."""
+            nonlocal video_writer, video_writer_path
+            if video_writer is not None:
+                try:
+                    video_writer.release()
+                except Exception as e:
+                    logger.warning(f"Error releasing writer for {camera_id}: {e}")
+                video_writer = None
+                video_writer_path = None
+
+        def _start_writer(frame_width, frame_height, fps):
+            """Helper to start a new MP4 file."""
+            nonlocal video_writer, video_writer_path
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = os.path.join(save_dir, f"_{timestamp_str}.mp4")
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            writer = cv2.VideoWriter(path, fourcc, fps, (frame_width, frame_height))
+            if not writer.isOpened():
+                logger.error(f"Failed to open VideoWriter for {camera_id} at {path}")
+                return None
+            video_writer = writer
+            video_writer_path = path
+            logger.info(f"Recording started for {camera_id} at path: {path}")
+            return writer
        
         while not cls.stop_events[camera_id].is_set():
             try:
@@ -162,9 +189,7 @@ class CameraManager:
                 if cap is None or not cap.isOpened():
                     logger.info(f"Connecting to camera {camera_id}: {camera_url}")
 
-                    if video_writer:
-                        video_writer.release()
-                        video_writer = None
+                    _release_writer()
 
                     cap = cv2.VideoCapture(camera_url)
                     cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
@@ -191,15 +216,8 @@ class CameraManager:
                     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
                     fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
                     if fps <= 0 or fps > 60: fps = 30
-                    
-                  
-                    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    save_path = os.path.join(save_dir, f"_{timestamp_str}.mp4")
-                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-                    video_writer = cv2.VideoWriter(save_path, fourcc, fps, (frame_width, frame_height))
-                    logger.info(f"Recording initialized for {camera_id} at path: {save_path}")
-                
-                    
+
+
                 # Read frame
                 ret, frame = cap.read()
                 
@@ -218,12 +236,22 @@ class CameraManager:
                 # cv2.imshow("cemera feed", display_frame)
                 # cv2.waitKey(1)
 
-                if video_writer is not None:
+                camera_info = cls.active_cameras[camera_id]
+
+                want_record = camera_info.get("record",False)
+
+                if want_record and video_writer is None:
+                    _start_writer(frame_width,frame_height,fps)
+                elif not want_record and video_writer is not None:
+                    logger.info(f"Recording stopped for {camera_id} ")
+                    _release_writer()
+
+                if video_writer:
                     video_writer.write(frame)
 
-                camera_info = cls.active_cameras[camera_id]
+                interval = camera_info.get("interval",1000)
                 
-                if time.time() - last_prediction_time >= camera_info['interval']:
+                if (time.time() - last_prediction_time)*1000 >= interval:
                     current_time = time.time()
                     try:
                         # because this method is running on different thread and calling the async method
@@ -366,31 +394,26 @@ class CameraManager:
         try:
             camera_info = cls.active_cameras.get(camera_id)
             if not camera_info:
-                return False
-            
+                return False            
+            print("SETTINGS ::::: ", settings)
             # Update camera object
             camera = camera_info["camera"]
             for key, value in settings.items():
-                if hasattr(camera, key):
+                if key in ["interval", "conf", "record"]:
+                    camera_info[key] = value
+                elif hasattr(camera, key):
+                    print("CAMERA INFO CHANGES")
                     setattr(camera, key, value)
+                else:
+                    print("NOTHING CHANGES SOME SORT OR ERROR")
             
             # Reconnect if IP or port changed
             if "ip_address" in settings or "port" in settings:
                 await cls.disconnect_camera(camera_id)
                 await cls.add_camera(camera)
-            
+
             return True
             
         except Exception as e:
             logger.error(f"Error updating camera settings: {str(e)}")
             return False
-
-    @classmethod
-    async def update_conf_interval(cls, camera_id: str, conf: float, interval: float):
-        # getting camera info
-        camera_info = cls.active_cameras.get(camera_id,{})
-        if camera_info:
-            camera_info["conf"] = conf
-            camera_info["interval"] = interval
-            return True
-        return False

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class StreamManager:
     """
-    Manages video streaming conversion from RTSP to HLS/WebRTC
+    Manages video streaming conversion from RTSP to WebRTC
     """
     
     active_streams: Dict[str, Dict[str, Any]] = {}
